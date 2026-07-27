@@ -381,5 +381,8 @@ if __name__ == "__main__":
     print(f"  Server: http://localhost:5000")
     print(f"  App UI: http://localhost:5000/app")
     print("=" * 62)
+    print(f"  ⚠ Demo server binds to 127.0.0.1 (localhost only)")
+    print(f"  To expose publicly: DEEPRESEARCH_HOST=0.0.0.0 DEEPRESEARCH_API_TOKEN=... python demo_batman.py")
+    print("=" * 62)
 
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    app.run(host="127.0.0.1", port=5000, debug=False)

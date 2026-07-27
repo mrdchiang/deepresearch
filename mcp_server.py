@@ -19,7 +19,8 @@ from server import (
     CONFIG, web_search, planner_agent, searcher_agent,
     analyst_agent, synthesizer_agent, report_to_markdown,
     report_to_wiki, ensure_vault_structure, save_wiki_note,
-    update_index, append_log, llm_call, parse_depth,
+    update_index, append_log, llm_call,
+    ExternalServiceError, public_error,
 )
 
 # ============================================================
@@ -102,7 +103,7 @@ def run_research_sync(question: str, depth: int) -> dict:
         return {
             "session_id": session_id,
             "question": question,
-            "error": str(e),
+            "error": public_error(e),
             "success": False,
         }
 
@@ -317,7 +318,7 @@ tags: [research, saved-from-mcp]
         except Exception as e:
             return [TextContent(
                 type="text",
-                text=f"❌ Failed to save: {str(e)}"
+                text=f"❌ Failed to save: {public_error(e)}"
             )]
 
     return [TextContent(type="text", text=f"Unknown tool: {name}")]

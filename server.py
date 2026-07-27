@@ -63,11 +63,16 @@ CONFIG = {
         "session_ttl_seconds": int(os.getenv("DEEPRESEARCH_SESSION_TTL_SECONDS", "86400")),
         "max_sessions": int(os.getenv("DEEPRESEARCH_MAX_SESSIONS", "100")),
         "rate_limit_per_minute": int(os.getenv("DEEPRESEARCH_RATE_LIMIT_PER_MINUTE", "10")),
+        "max_concurrent_research": int(os.getenv("DEEPRESEARCH_MAX_CONCURRENT", "5")),
+        "request_timeout_seconds": int(os.getenv("DEEPRESEARCH_REQUEST_TIMEOUT", "600")),
+        "active_session_timeout_seconds": int(os.getenv("DEEPRESEARCH_ACTIVE_TIMEOUT", "1800")),
     },
 }
 
 SESSION_LOCK = threading.RLock()
 RATE_LIMITS: dict[str, deque] = {}
+ACTIVE_RESEARCH_COUNT = 0
+ACTIVE_RESEARCH_CONDITION = threading.Condition(SESSION_LOCK)
 
 
 class ExternalServiceError(RuntimeError):
@@ -487,18 +492,27 @@ SESSIONS: dict[str, ResearchSession] = {}
 
 
 def cleanup_sessions():
-    """Drop old completed/error sessions and cap total in-memory sessions."""
+    """Drop old sessions and cap total in-memory sessions. Also clean hung active sessions."""
     now = time.time()
     ttl = CONFIG["security"]["session_ttl_seconds"]
+    active_timeout = CONFIG["security"]["active_session_timeout_seconds"]
     max_sessions = CONFIG["security"]["max_sessions"]
     with SESSION_LOCK:
+        # Remove completed/error sessions past TTL
         expired = [
             sid for sid, session in SESSIONS.items()
             if ttl > 0
             and session.status in ("complete", "error")
             and now - session.updated_at > ttl
         ]
-        for sid in expired:
+        # Also remove active sessions that hung (past active timeout)
+        hung = [
+            sid for sid, session in SESSIONS.items()
+            if active_timeout > 0
+            and session.status not in ("complete", "error")
+            and now - session.updated_at > active_timeout
+        ]
+        for sid in expired + hung:
             SESSIONS.pop(sid, None)
 
         if max_sessions > 0 and len(SESSIONS) > max_sessions:
@@ -738,15 +752,24 @@ def safe_vault_path(vault_path: str, filename: str) -> Path:
 
 
 def save_wiki_note(vault_path: str, filename: str, content: str):
-    """Save a wiki note, creating parent directories if needed."""
+    """Save a wiki note, creating parent directories. Adds suffix if file exists."""
     filepath = safe_vault_path(vault_path, filename)
     filepath.parent.mkdir(parents=True, exist_ok=True)
+    # Collision policy: append -2, -3, etc. if file already exists
+    if filepath.exists():
+        stem = filepath.stem
+        suffix = filepath.suffix
+        parent = filepath.parent
+        counter = 2
+        while filepath.exists():
+            filepath = parent / f"{stem}-{counter}{suffix}"
+            counter += 1
     filepath.write_text(content, encoding="utf-8")
 
 
 def update_index(vault_path: str, entries: list[dict]):
     """Update index.md with new entries under their sections."""
-    index_path = Path(vault_path, "index.md")
+    index_path = safe_vault_path(vault_path, "index.md")
     current = index_path.read_text(encoding="utf-8") if index_path.exists() else ""
 
     if not current:
@@ -778,7 +801,7 @@ def update_index(vault_path: str, entries: list[dict]):
 
 def append_log(vault_path: str, action: str, details: str):
     """Append an entry to log.md."""
-    log_path = Path(vault_path, "log.md")
+    log_path = safe_vault_path(vault_path, "log.md")
     date_str = datetime.now().strftime("%Y-%m-%d %H:%M")
     entry = f"\n## [{date_str}] {action}\n{details}\n"
 
@@ -860,13 +883,31 @@ def start_research():
 
     session_id = uuid.uuid4().hex[:12]
     session = ResearchSession(session_id, question, depth)
-    with SESSION_LOCK:
+
+    # Enforce max concurrent research
+    max_concurrent = CONFIG["security"]["max_concurrent_research"]
+    with ACTIVE_RESEARCH_CONDITION:
+        cleanup_sessions()
+        if max_concurrent > 0:
+            while ACTIVE_RESEARCH_COUNT >= max_concurrent:
+                ACTIVE_RESEARCH_CONDITION.wait(timeout=30)
+                cleanup_sessions()
         if CONFIG["security"]["max_sessions"] > 0 and len(SESSIONS) >= CONFIG["security"]["max_sessions"]:
             return jsonify({"error": "server is at session capacity"}), 429
         SESSIONS[session_id] = session
+        ACTIVE_RESEARCH_COUNT += 1
 
-    # Start research in background thread
-    thread = threading.Thread(target=run_research, args=(session,), daemon=True)
+    # Start research in background thread with timeout enforcement
+    def _run_with_cleanup():
+        try:
+            run_research(session)
+        finally:
+            with ACTIVE_RESEARCH_CONDITION:
+                global ACTIVE_RESEARCH_COUNT
+                ACTIVE_RESEARCH_COUNT -= 1
+                ACTIVE_RESEARCH_CONDITION.notify_all()
+
+    thread = threading.Thread(target=_run_with_cleanup, daemon=True)
     thread.start()
 
     return jsonify({
