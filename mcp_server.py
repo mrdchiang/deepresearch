@@ -15,13 +15,15 @@ from datetime import datetime
 # Add parent to path so we can import server modules
 sys.path.insert(0, str(Path(__file__).parent))
 
-from server import (
-    CONFIG, web_search, planner_agent, searcher_agent,
-    analyst_agent, synthesizer_agent, report_to_markdown,
+from config import CONFIG, ExternalServiceError, public_error
+from llm_client import llm_call
+from search import web_search
+from agents import planner_agent, searcher_agent, analyst_agent, synthesizer_agent
+from vault import (
     report_to_wiki, ensure_vault_structure, save_wiki_note,
-    update_index, append_log, llm_call,
-    ExternalServiceError, public_error,
+    update_index, append_log,
 )
+from server import report_to_markdown, parse_depth
 
 # ============================================================
 # MCP SERVER

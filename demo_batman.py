@@ -9,10 +9,10 @@ import json, os, sys, uuid
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from server import (
-    ResearchSession, SESSIONS, app, CONFIG,
-    save_wiki_note, ensure_vault_structure, update_index, append_log,
-)
+from config import CONFIG
+from orchestrator import ResearchSession, SESSIONS
+from vault import save_wiki_note, ensure_vault_structure, update_index, append_log
+from server import app
 
 SIMULATED_REPORT = {
     "title": "Who Is the Greatest Batman Actor? A Comprehensive Multi-Dimensional Analysis Across 80 Years of Cinematic History",

@@ -9,15 +9,11 @@ from unittest.mock import patch, MagicMock
 import pytest
 
 sys.path.insert(0, str(Path(__file__).parent))
-from server import (
-    CONFIG, ResearchSession, SESSIONS, SESSION_LOCK,
-    cleanup_sessions, parse_depth,
-    ExternalServiceError, public_error,
-    safe_vault_path, save_wiki_note, update_index, append_log,
-    ensure_vault_structure,
-    planner_agent, searcher_agent, analyst_agent, synthesizer_agent,
-    require_api_token, enforce_rate_limit,
-)
+from config import CONFIG, SESSION_LOCK, ExternalServiceError, public_error
+from orchestrator import ResearchSession, SESSIONS, cleanup_sessions, parse_depth
+from vault import safe_vault_path, save_wiki_note, update_index, append_log, ensure_vault_structure
+from agents import planner_agent, searcher_agent, analyst_agent, synthesizer_agent
+from server import require_api_token, enforce_rate_limit
 
 # ═══════════════════════════════════════════════════════════
 # 1. Security: public_error() sanitization
@@ -186,7 +182,7 @@ MOCK_SYNTHESIZER_RESPONSE = json.dumps({
 })
 
 
-@patch("server.llm_call")
+@patch("agents.llm_call")
 def test_planner_agent_parses_valid_json(mock_llm):
     mock_llm.return_value = MOCK_PLANNER_RESPONSE
     result = planner_agent("Test question?")
@@ -194,8 +190,8 @@ def test_planner_agent_parses_valid_json(mock_llm):
     assert result["sub_questions"][0]["question"] == "Test Q1?"
 
 
-@patch("server.llm_call")
-@patch("server.web_search")
+@patch("agents.llm_call")
+@patch("agents.web_search")
 def test_searcher_agent_parses_valid_json(mock_search, mock_llm):
     mock_search.return_value = [{"title": "Test", "url": "https://example.com", "snippet": "test"}]
     mock_llm.return_value = MOCK_SEARCHER_RESPONSE
@@ -204,7 +200,7 @@ def test_searcher_agent_parses_valid_json(mock_search, mock_llm):
     assert result["findings"][0]["fact"] == "Important fact"
 
 
-@patch("server.llm_call")
+@patch("agents.llm_call")
 def test_analyst_agent_parses_valid_json(mock_llm):
     mock_llm.return_value = MOCK_ANALYST_RESPONSE
     result = analyst_agent("Test question?", [MOCK_SEARCHER_RESPONSE])
@@ -212,7 +208,7 @@ def test_analyst_agent_parses_valid_json(mock_llm):
     assert result["needs_more_research"] is False
 
 
-@patch("server.llm_call")
+@patch("agents.llm_call")
 def test_synthesizer_agent_parses_valid_json(mock_llm):
     mock_llm.return_value = MOCK_SYNTHESIZER_RESPONSE
     result = synthesizer_agent("Test?", [{"findings": []}], {})
