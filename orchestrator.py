@@ -213,6 +213,8 @@ def run_research(session: ResearchSession):
         })
 
         report = synthesizer_agent(session.question, all_findings, session.metadata)
+        # Inject real metadata — the LLM may overwrite it in the prompt
+        report["research_metadata"] = session.metadata
         session.report = report
         session.status = "complete"
         session.emit("report_complete", report)

@@ -91,6 +91,7 @@ def run_research_sync(question: str, depth: int) -> dict:
 
         # Phase 4: Synthesize
         report = synthesizer_agent(question, all_findings, metadata)
+        report["research_metadata"] = metadata  # inject real metadata
 
         return {
             "session_id": session_id,

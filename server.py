@@ -481,7 +481,7 @@ def upload_pdf():
 
 @app.route("/api/email/search", methods=["POST"])
 def search_email():
-    """Search local .eml files or Gmail inbox for research-relevant emails."""
+    """Search local .eml files for research-relevant emails."""
     auth_error = require_api_token()
     if auth_error:
         return auth_error
