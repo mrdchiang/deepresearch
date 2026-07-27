@@ -438,6 +438,7 @@ def report_to_markdown(report: dict) -> str:
 # ── Templates endpoint ──
 
 from templates import list_templates, apply_template
+from search import deep_read
 
 
 @app.route("/api/templates", methods=["GET"])
@@ -456,6 +457,65 @@ def apply_template_endpoint():
         return jsonify({"error": "subject is required"}), 400
     prompt = apply_template(template_id, subject)
     return jsonify({"prompt": prompt, "template_id": template_id})
+
+
+@app.route("/api/deep-read", methods=["POST"])
+def deep_read_endpoint():
+    """Fetch and extract content from a URL."""
+    data = request.get_json(silent=True) or {}
+    url = data.get("url", "").strip()
+    if not url:
+        return jsonify({"error": "url is required"}), 400
+    result = deep_read(url)
+    return jsonify(result)
+
+
+@app.route("/api/research/<session_id>/followup", methods=["POST"])
+def followup_research(session_id: str):
+    """Multi-turn: ask a follow-up question against existing research findings."""
+    auth_error = require_api_token()
+    if auth_error:
+        return auth_error
+    with SESSION_LOCK:
+        session = SESSIONS.get(session_id)
+    if not session:
+        return jsonify({"error": "session not found"}), 404
+    if not session.report:
+        return jsonify({"error": "original research not yet complete"}), 400
+
+    data = request.get_json(silent=True) or {}
+    followup = data.get("question", "").strip()
+    if len(followup) < 5:
+        return jsonify({"error": "follow-up question too short"}), 400
+
+    # Re-run analyst + synthesizer with follow-up context
+    from agents import analyst_agent, synthesizer_agent
+
+    session.emit("phase", {"phase": "followup", "message": f"Follow-up: {followup}"})
+
+    # Add follow-up as a gap-fill analysis
+    existing_findings = [{
+        "sub_question": session.question,
+        "findings": [{"fact": s.get("heading", ""), "source_url": u.get("url", ""),
+                       "source_title": u.get("title", ""), "confidence": "high", "freshness": "current_year", "type": "analysis"}
+                      for s in session.report.get("sections", [])
+                      for u in session.report.get("sources", [])[:1]],
+    }]
+
+    analysis = analyst_agent(followup, existing_findings)
+    session.emit("analysis_complete", {
+        "coverage_score": analysis.get("coverage_score", 0),
+        "needs_more": analysis.get("needs_more_research", False),
+        "assessment": analysis.get("overall_assessment", ""),
+    })
+
+    # Synthesize follow-up
+    combined_meta = {**session.metadata, "followup_question": followup}
+    followup_report = synthesizer_agent(followup, existing_findings, combined_meta)
+    followup_report["title"] = f"Follow-up: {followup}"
+    session.emit("report_complete", followup_report)
+
+    return jsonify({"status": "complete", "report": followup_report})
 
 
 # ============================================================

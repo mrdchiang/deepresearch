@@ -89,3 +89,47 @@ def file_search(query: str, search_paths: list[str] = None, max_results: int = 1
 
     results.sort(key=lambda r: -r.get("relevance_score", 0))
     return results[:max_results]
+
+
+def deep_read(url: str, max_chars: int = 10000) -> dict:
+    """Fetch and extract readable content from a URL. Returns structured result."""
+    try:
+        import requests as http_requests
+        resp = http_requests.get(url, timeout=15, headers={
+            "User-Agent": "DeepResearch/1.0 (research bot; contact@example.com)"
+        })
+        resp.raise_for_status()
+        content_type = resp.headers.get("content-type", "")
+
+        if "text/html" in content_type:
+            # Extract readable text from HTML
+            import re as _re
+            html = resp.text
+            # Strip scripts, styles, and tags
+            html = _re.sub(r'<script[^>]*>.*?</script>', '', html, flags=_re.DOTALL | _re.IGNORECASE)
+            html = _re.sub(r'<style[^>]*>.*?</style>', '', html, flags=_re.DOTALL | _re.IGNORECASE)
+            html = _re.sub(r'<[^>]+>', ' ', html)
+            html = _re.sub(r'\s+', ' ', html).strip()
+            text = html[:max_chars]
+        elif "text/plain" in content_type or "application/json" in content_type:
+            text = resp.text[:max_chars]
+        elif "application/pdf" in content_type:
+            text = f"[PDF document: {len(resp.content)} bytes. Use /api/upload/pdf to extract text.]"
+        else:
+            text = f"[Unsupported content type: {content_type}]"
+
+        return {
+            "url": url,
+            "content": text,
+            "content_type": content_type,
+            "status_code": resp.status_code,
+            "length": len(text),
+            "source_type": "deep_read",
+        }
+    except Exception as e:
+        return {
+            "url": url,
+            "content": "",
+            "error": str(e),
+            "source_type": "deep_read",
+        }
