@@ -438,7 +438,65 @@ def report_to_markdown(report: dict) -> str:
 # ── Templates endpoint ──
 
 from templates import list_templates, apply_template
-from search import deep_read
+from search import deep_read, extract_pdf_text
+
+
+@app.route("/api/upload/pdf", methods=["POST"])
+def upload_pdf():
+    """Upload a PDF file and extract its text for research."""
+    if "file" not in request.files:
+        return jsonify({"error": "no file uploaded"}), 400
+    file = request.files["file"]
+    if not file.filename or not file.filename.lower().endswith(".pdf"):
+        return jsonify({"error": "only PDF files accepted"}), 400
+
+    import tempfile
+    with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+        file.save(tmp.name)
+        result = extract_pdf_text(tmp.name)
+    os.unlink(tmp.name)
+    return jsonify(result)
+
+
+@app.route("/api/email/search", methods=["POST"])
+def search_email():
+    """Search local .eml files or Gmail inbox for research-relevant emails."""
+    data = request.get_json(silent=True) or {}
+    query = data.get("query", "").strip()
+    path = data.get("path", os.path.expanduser("~/Documents/emails"))
+
+    if not query:
+        return jsonify({"error": "query is required"}), 400
+
+    results = []
+    import email, email.policy
+    sp = Path(path).expanduser()
+    if sp.exists():
+        for eml_file in sp.rglob("*.eml"):
+            try:
+                msg = email.message_from_bytes(eml_file.read_bytes(), policy=email.policy.default)
+                body = ""
+                if msg.is_multipart():
+                    for part in msg.walk():
+                        if part.get_content_type() == "text/plain":
+                            body += part.get_content()
+                else:
+                    body = msg.get_content()
+                if query.lower() in f"{msg['subject']} {msg['from']} {body}".lower():
+                    results.append({
+                        "subject": msg["subject"] or "(no subject)",
+                        "from": msg["from"] or "",
+                        "date": msg["date"] or "",
+                        "snippet": body[:500],
+                        "source_type": "email",
+                        "filepath": str(eml_file),
+                    })
+                if len(results) >= 10:
+                    break
+            except Exception:
+                continue
+
+    return jsonify({"results": results, "count": len(results)})
 
 
 @app.route("/api/templates", methods=["GET"])

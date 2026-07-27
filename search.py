@@ -133,3 +133,37 @@ def deep_read(url: str, max_chars: int = 10000) -> dict:
             "error": str(e),
             "source_type": "deep_read",
         }
+
+
+def extract_pdf_text(filepath: str, max_chars: int = 20000) -> dict:
+    """Extract text from a PDF file. Returns structured result."""
+    try:
+        import fitz  # PyMuPDF
+        doc = fitz.open(filepath)
+        text = ""
+        for page in doc:
+            text += page.get_text()
+            if len(text) > max_chars:
+                break
+        doc.close()
+        return {
+            "filepath": filepath,
+            "content": text[:max_chars],
+            "pages": len(doc),
+            "length": len(text),
+            "source_type": "pdf",
+        }
+    except ImportError:
+        return {
+            "filepath": filepath,
+            "content": "",
+            "error": "PyMuPDF not installed. Run: pip install PyMuPDF",
+            "source_type": "pdf",
+        }
+    except Exception as e:
+        return {
+            "filepath": filepath,
+            "content": "",
+            "error": str(e),
+            "source_type": "pdf",
+        }
