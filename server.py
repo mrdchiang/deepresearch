@@ -652,8 +652,14 @@ CORS(app)
 
 @app.route("/")
 def index():
-    """Serve the HTML frontend."""
+    """Serve the landing page."""
     return send_from_directory(".", "index.html")
+
+
+@app.route("/app")
+def app_page():
+    """Serve the research app UI."""
+    return send_from_directory(".", "app.html")
 
 
 @app.route("/api/health", methods=["GET"])

@@ -3,8 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DeepResearch — Multi-Agent Research System</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<title>DeepResearch — Open-Source Microsoft Researcher Alternative</title>
 <style>
 :root {
   --bg: #0d1117;
@@ -15,932 +14,385 @@
   --text2: #8b949e;
   --accent: #58a6ff;
   --accent2: #3fb950;
-  --warn: #d29922;
-  --danger: #f85149;
   --purple: #bc8cff;
+  --warn: #d29922;
   --radius: 8px;
   --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   --mono: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
 }
-
 * { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.6; }
+.container { max-width: 900px; margin: 0 auto; padding: 24px 20px 80px; }
 
-body {
-  font-family: var(--font);
-  background: var(--bg);
-  color: var(--text);
-  min-height: 100vh;
-  line-height: 1.6;
-}
-
-/* Layout */
-.container {
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 24px 20px 60px;
-}
-
-/* Header */
-.header {
-  text-align: center;
-  padding: 32px 0 20px;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 32px;
-}
-.header h1 {
-  font-size: 28px;
-  font-weight: 700;
+/* Hero */
+.hero { text-align: center; padding: 48px 0 32px; }
+.hero h1 {
+  font-size: 42px; font-weight: 800;
   background: linear-gradient(135deg, var(--accent), var(--purple));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
 }
-.header p {
-  color: var(--text2);
-  font-size: 14px;
-  margin-top: 6px;
+.hero .tagline { font-size: 18px; color: var(--text2); margin: 12px 0 24px; max-width: 600px; margin-left: auto; margin-right: auto; }
+.hero .badges { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.badge {
+  padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
+  background: var(--surface2); border: 1px solid var(--border);
 }
 
-/* Input Area */
-.input-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 24px;
-  margin-bottom: 24px;
-}
-.input-card label {
-  display: block;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text2);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 8px;
-}
-.input-row {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 12px;
-}
-.input-row input {
-  flex: 1;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 12px 16px;
-  color: var(--text);
-  font-size: 15px;
-  font-family: var(--font);
-  outline: none;
-  transition: border-color 0.2s;
-}
-.input-row input:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15);
-}
-.input-row input::placeholder {
-  color: var(--text2);
-}
+/* Buttons */
+.btn-row { display: flex; gap: 12px; justify-content: center; margin: 24px 0; flex-wrap: wrap; }
 .btn {
-  background: var(--accent);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius);
-  padding: 12px 24px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-family: var(--font);
-  white-space: nowrap;
+  padding: 12px 28px; border-radius: var(--radius); font-size: 14px; font-weight: 600;
+  text-decoration: none; cursor: pointer; transition: all 0.2s; border: none;
 }
-.btn:hover { background: #4090e0; transform: translateY(-1px); }
-.btn:active { transform: translateY(0); }
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none;
-}
-.btn-secondary {
-  background: var(--surface2);
-  color: var(--text);
-  border: 1px solid var(--border);
-}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: #4090e0; transform: translateY(-1px); }
+.btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
 .btn-secondary:hover { background: var(--border); }
-.btn-small {
-  padding: 6px 14px;
-  font-size: 12px;
+
+/* Sections */
+.section { margin: 48px 0; }
+.section h2 { font-size: 24px; margin-bottom: 16px; color: var(--accent); }
+.section h3 { font-size: 16px; margin: 16px 0 8px; }
+
+/* Pipeline diagram */
+.pipeline {
+  display: flex; gap: 8px; justify-content: center; align-items: center;
+  flex-wrap: wrap; margin: 24px 0; font-size: 13px;
+}
+.pipeline-step {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 14px 18px; text-align: center; min-width: 90px;
+}
+.pipeline-step .emoji { font-size: 24px; }
+.pipeline-step .label { font-weight: 600; margin-top: 6px; }
+.pipeline-step .sub { font-size: 11px; color: var(--text2); margin-top: 2px; }
+.pipeline-arrow { color: var(--accent); font-size: 20px; }
+
+/* Code blocks */
+.code-block {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 16px 20px; font-family: var(--mono); font-size: 13px;
+  overflow-x: auto; margin: 12px 0; position: relative;
+}
+.code-block .copy-btn {
+  position: absolute; top: 10px; right: 10px;
+  background: var(--surface2); border: 1px solid var(--border); color: var(--text2);
+  border-radius: 4px; padding: 2px 10px; font-size: 11px; cursor: pointer;
+}
+.code-block .comment { color: var(--text2); }
+.code-block .cmd { color: var(--accent2); }
+
+/* Feature grid */
+.feature-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px; margin: 20px 0;
+}
+.feature-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 20px;
+}
+.feature-card h3 { font-size: 15px; margin: 0 0 8px; color: var(--accent2); }
+.feature-card p { font-size: 13px; color: var(--text2); line-height: 1.6; }
+
+/* Demo section */
+.demo-box {
+  background: var(--surface); border: 1px solid var(--accent2); border-radius: var(--radius);
+  padding: 24px; margin: 20px 0; position: relative;
+}
+.demo-box::before {
+  content: "🦇 LIVE DEMO"; position: absolute; top: -10px; left: 20px;
+  background: var(--accent2); color: #000; padding: 2px 12px; border-radius: 10px;
+  font-size: 11px; font-weight: 700;
 }
 
-/* Config row */
-.config-row {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-  font-size: 13px;
-  color: var(--text2);
-  flex-wrap: wrap;
+/* Steps */
+.step-list { counter-reset: step; }
+.step {
+  counter-increment: step; margin: 16px 0; padding: 14px 18px;
+  background: var(--surface); border-radius: var(--radius);
+  border-left: 3px solid var(--accent);
 }
-.config-row select {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  color: var(--text);
-  padding: 4px 8px;
-  font-size: 13px;
-}
-.config-row .server-url {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  color: var(--text2);
-  padding: 4px 10px;
-  font-size: 12px;
-  font-family: var(--mono);
-  width: 220px;
-}
+.step::before { content: counter(step); color: var(--accent); font-weight: 700; font-size: 14px; margin-right: 12px; }
+.step strong { color: var(--text); }
+.step code { background: var(--surface2); padding: 1px 6px; border-radius: 3px; font-size: 12px; }
 
-/* Progress Panel */
-.progress-panel {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 20px;
-  margin-bottom: 24px;
-  display: none;
-}
-.progress-panel.active { display: block; }
-.progress-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 16px;
-}
-.spinner {
-  width: 20px;
-  height: 20px;
-  border: 2px solid var(--border);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-.progress-header .phase-label {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--accent);
-}
-.progress-header .stats {
-  font-size: 12px;
-  color: var(--text2);
-  margin-left: auto;
-}
-/* Agent status cards */
-.agent-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 10px;
-}
-.agent-card {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 12px;
-  font-size: 13px;
-}
-.agent-card .agent-name {
-  font-weight: 600;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--text2);
-}
-.agent-card .agent-status {
-  color: var(--accent2);
-  font-size: 12px;
-  margin-top: 2px;
-}
-.agent-card .agent-detail {
-  color: var(--text2);
-  font-size: 11px;
-  margin-top: 4px;
-  font-family: var(--mono);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+/* Comparison table */
+.compare-table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+.compare-table th { background: var(--surface2); padding: 10px 14px; text-align: left; }
+.compare-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); }
+.compare-table .check { color: var(--accent2); }
+.compare-table .warn { color: var(--warn); }
 
-/* Phase timeline */
-.phase-timeline {
-  margin-top: 12px;
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.phase-badge {
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 11px;
-  font-weight: 600;
-  background: var(--surface2);
-  color: var(--text2);
-}
-.phase-badge.active {
-  background: rgba(88, 166, 255, 0.15);
-  color: var(--accent);
-}
-.phase-badge.done {
-  background: rgba(63, 185, 80, 0.15);
-  color: var(--accent2);
-}
-
-/* Finding feed */
-.finding-feed {
-  margin-top: 16px;
-  max-height: 240px;
-  overflow-y: auto;
-  font-size: 12px;
-}
-.finding-item {
-  padding: 8px 12px;
-  border-left: 2px solid var(--accent);
-  margin-bottom: 6px;
-  background: var(--bg);
-  border-radius: 0 4px 4px 0;
-  animation: fadeIn 0.3s ease;
-}
-.finding-item .finding-subq {
-  color: var(--accent);
-  font-weight: 600;
-}
-.finding-item .finding-count {
-  color: var(--text2);
-}
-@keyframes fadeIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }
-
-/* Report */
-.report-container {
-  display: none;
-  animation: fadeIn 0.5s ease;
-}
-.report-container.active { display: block; }
-
-.report-header {
-  margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--border);
-}
-.report-title {
-  font-size: 24px;
-  font-weight: 700;
-  margin-bottom: 8px;
-}
-.report-meta {
-  font-size: 13px;
-  color: var(--text2);
-}
-
-/* Report sections */
-.report-section {
-  margin-bottom: 28px;
-}
-.report-section h2 {
-  font-size: 18px;
-  font-weight: 600;
-  margin-bottom: 12px;
-  color: var(--accent);
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--border);
-}
-.report-section h3 {
-  font-size: 15px;
-  font-weight: 600;
-  margin: 16px 0 8px;
-}
-.report-section p {
-  font-size: 15px;
-  line-height: 1.75;
-  margin-bottom: 12px;
-}
-.report-section .citation {
-  color: var(--accent);
-  font-size: 13px;
-  text-decoration: none;
-  cursor: pointer;
-}
-.report-section .citation:hover {
-  text-decoration: underline;
-}
-
-/* Tables */
-.report-table-wrap {
-  overflow-x: auto;
-  margin: 16px 0;
-}
-.report-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 14px;
-}
-.report-table th {
-  background: var(--surface2);
-  padding: 10px 14px;
-  text-align: left;
-  font-weight: 600;
-  border-bottom: 2px solid var(--border);
-}
-.report-table td {
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--border);
-}
-.report-table tr:hover td {
-  background: rgba(88, 166, 255, 0.04);
-}
-
-/* Takeaways */
-.takeaway-list {
-  list-style: none;
-}
-.takeaway-list li {
-  padding: 10px 14px;
-  margin-bottom: 8px;
-  background: var(--surface);
-  border-radius: var(--radius);
-  border-left: 3px solid var(--accent2);
-  font-size: 14px;
-}
-.takeaway-list li::before {
-  content: "→ ";
-  color: var(--accent2);
-  font-weight: 700;
-}
-
-/* Sources */
-.source-list {
-  list-style: none;
-  counter-reset: source;
-}
-.source-list li {
-  padding: 6px 0;
-  font-size: 13px;
-  counter-increment: source;
-}
-.source-list li::before {
-  content: "[" counter(source) "] ";
-  color: var(--text2);
-  font-weight: 600;
-}
-.source-list a {
-  color: var(--accent);
-  text-decoration: none;
-}
-.source-list a:hover { text-decoration: underline; }
-
-/* Uncertainty */
-.uncertainty-box {
-  background: rgba(210, 153, 34, 0.08);
-  border: 1px solid rgba(210, 153, 34, 0.3);
-  border-radius: var(--radius);
-  padding: 16px;
-  margin: 16px 0;
-}
-.uncertainty-box h3 {
-  color: var(--warn);
-  margin: 0 0 8px;
-  font-size: 14px;
-}
-.uncertainty-box li {
-  font-size: 13px;
-  margin-bottom: 4px;
-}
-
-/* Error */
-.error-card {
-  background: rgba(248, 81, 73, 0.1);
-  border: 1px solid var(--danger);
-  border-radius: var(--radius);
-  padding: 16px;
-  margin: 16px 0;
-  color: var(--danger);
-}
-
-/* Actions bar */
-.actions-bar {
-  display: flex;
-  gap: 10px;
-  margin-top: 24px;
-  flex-wrap: wrap;
-}
-
-/* Exec summary card */
-.exec-summary {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 20px;
-  margin-bottom: 28px;
-  font-size: 15px;
-  line-height: 1.75;
-}
+/* Footer */
+.footer { text-align: center; padding: 32px 0; color: var(--text2); font-size: 13px; border-top: 1px solid var(--border); margin-top: 48px; }
+.footer a { color: var(--accent); }
 
 /* Responsive */
 @media (max-width: 640px) {
-  .container { padding: 16px; }
-  .input-row { flex-direction: column; }
-  .agent-grid { grid-template-columns: 1fr; }
+  .hero h1 { font-size: 28px; }
+  .pipeline { flex-direction: column; }
 }
-
-/* Chart containers */
-.chart-wrap {
-  margin: 20px 0;
-  padding: 16px;
-  background: var(--surface);
-  border-radius: var(--radius);
-}
-.chart-wrap canvas { max-height: 300px; }
 </style>
 </head>
 <body>
 
 <div class="container">
 
-  <!-- Header -->
-  <div class="header">
+  <!-- Hero -->
+  <div class="hero">
     <h1>DeepResearch</h1>
-    <p>Tier 3 Multi-Agent Research — Planner → Searcher → Analyst → Synthesizer</p>
-  </div>
-
-  <!-- Input -->
-  <div class="input-card" id="inputCard">
-    <label for="question">Research Question</label>
-    <div class="input-row">
-      <input
-        type="text"
-        id="question"
-        placeholder="e.g., What are the economic impacts of AI on software engineering jobs by 2030?"
-        autocomplete="off"
-      >
-      <button class="btn" id="submitBtn" onclick="startResearch()">▶ Research</button>
+    <p class="tagline">
+      Open-source alternative to Microsoft Researcher. Multi-agent AI that decomposes questions,
+      searches the web, analyzes gaps, and produces structured cited reports.
+    </p>
+    <div class="badges">
+      <span class="badge">4-Agent Pipeline</span>
+      <span class="badge">Free Web Search</span>
+      <span class="badge">Claude + ChatGPT Ready</span>
+      <span class="badge">Obsidian 2nd Brain</span>
+      <span class="badge">MCP Server</span>
     </div>
-    <div class="config-row">
-      <label>
-        Depth:
-        <select id="depthSelect">
-          <option value="1">Quick (1 iteration)</option>
-          <option value="2">Standard (2 iterations)</option>
-          <option value="3" selected>Deep (3 iterations)</option>
-          <option value="4">Exhaustive (4 iterations)</option>
-        </select>
-      </label>
-      <label>Server: <input class="server-url" id="serverUrl" value="http://localhost:5000"></label>
-      <span id="healthDot" style="width:8px;height:8px;border-radius:50%;background:var(--text2);display:inline-block;"></span>
-      <span id="healthText" style="font-size:11px;color:var(--text2);">checking...</span>
+    <div class="btn-row">
+      <a href="https://github.com/mrdchiang/deepresearch" class="btn btn-primary">📦 GitHub Repo</a>
+      <a href="http://localhost:5000" class="btn btn-secondary" id="localDemo">🌐 Live Demo</a>
     </div>
   </div>
 
-  <!-- Progress -->
-  <div class="progress-panel" id="progressPanel">
-    <div class="progress-header">
-      <div class="spinner" id="spinner"></div>
-      <span class="phase-label" id="phaseLabel">Planning...</span>
-      <span class="stats" id="statsLabel"></span>
+  <!-- Pipeline -->
+  <div class="section">
+    <h2>How It Works</h2>
+    <div class="pipeline">
+      <div class="pipeline-step">
+        <div class="emoji">🧠</div><div class="label">Planner</div>
+        <div class="sub">decomposes question</div>
+      </div>
+      <div class="pipeline-arrow">→</div>
+      <div class="pipeline-step">
+        <div class="emoji">🔍</div><div class="label">Searcher</div>
+        <div class="sub">web search × N angles</div>
+      </div>
+      <div class="pipeline-arrow">→</div>
+      <div class="pipeline-step">
+        <div class="emoji">📊</div><div class="label">Analyst</div>
+        <div class="sub">finds gaps, scores</div>
+      </div>
+      <div class="pipeline-arrow">→</div>
+      <div class="pipeline-step">
+        <div class="emoji">✍️</div><div class="label">Synthesizer</div>
+        <div class="sub">cited report</div>
+      </div>
     </div>
-    <div class="phase-timeline" id="phaseTimeline"></div>
-    <div class="agent-grid" id="agentGrid"></div>
-    <div class="finding-feed" id="findingFeed"></div>
+    <p style="text-align:center;font-size:13px;color:var(--text2);">Iterates up to 4 times — each pass searches new angles discovered in the analysis</p>
   </div>
 
-  <!-- Report -->
-  <div class="report-container" id="reportContainer"></div>
+  <!-- Features -->
+  <div class="section">
+    <h2>Features</h2>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <h3>🔍 Multi-Agent Pipeline</h3>
+        <p>4 specialized agents (Planner, Searcher, Analyst, Synthesizer) work together in an iterative loop — searching, analyzing gaps, and repeating until comprehensive.</p>
+      </div>
+      <div class="feature-card">
+        <h3>📚 Source-Cited Reports</h3>
+        <p>Every finding links to its origin URL. Reports include executive summary, structured sections, data tables, key takeaways, and areas of uncertainty.</p>
+      </div>
+      <div class="feature-card">
+        <h3>🧠 2nd Brain Integration</h3>
+        <p>Save research to your Obsidian vault as interlinked wiki notes with YAML frontmatter and [[wikilinks]] — fully searchable by other LLMs.</p>
+      </div>
+      <div class="feature-card">
+        <h3>🆓 Free Web Search</h3>
+        <p>Uses DuckDuckGo — no API key needed for web search. Only the LLM calls need an API key (any OpenAI-compatible provider works).</p>
+      </div>
+      <div class="feature-card">
+        <h3>🔌 MCP Server</h3>
+        <p>Works as a native MCP tool inside Claude Desktop, ChatGPT, Cursor, and any MCP-compatible client. Research from your chat, not a separate app.</p>
+      </div>
+      <div class="feature-card">
+        <h3>🎨 Dark-Themed UI</h3>
+        <p>Clean web interface with live progress streaming (SSE), agent status cards, and interactive report viewer. Host anywhere or use the MCP mode.</p>
+      </div>
+    </div>
+  </div>
 
-  <!-- Error -->
-  <div id="errorArea"></div>
+  <!-- Demo -->
+  <div class="section">
+    <div class="demo-box">
+      <h3 style="margin-top:0;">Try It: "Which actor is the greatest Batman?"</h3>
+      <p style="color:var(--text2);font-size:14px;margin:8px 0 16px;">
+        Pre-loaded demo session showing the full research output: 6 sections, 10 cited sources,
+        6 key takeaways, data tables, and uncertainty notes. No API key needed to view.
+      </p>
+      <strong style="font-size:20px;">🦇 Who Is the Greatest Batman Actor? A Multi-Dimensional Analysis</strong>
+      <p style="margin:8px 0;font-size:14px;">After analyzing critical reception, box office performance, cultural impact, and acting craft across 8 Batman actors from 1943–2026, <strong>Christian Bale</strong> leads in critical consensus and box office, while <strong>Kevin Conroy</strong> dominates as the definitive voice. However, "greatest" depends on criteria: Bale for realism, Keaton for trailblazing, Conroy for fidelity to source material, and Pattinson for psychological complexity.</p>
+
+      <table class="compare-table">
+        <tr><th>Actor</th><th>RT Avg</th><th>Box Office</th><th>Legacy</th></tr>
+        <tr><td>Christian Bale</td><td>92%</td><td>$2.46B</td><td>Elevated superhero films to prestige cinema</td></tr>
+        <tr><td>Kevin Conroy</td><td>95% (fans)</td><td>N/A</td><td>Definitive voice across 30 years</td></tr>
+        <tr><td>Michael Keaton</td><td>78%</td><td>$1.19B</td><td>Proved dark Batman could succeed</td></tr>
+        <tr><td>Robert Pattinson</td><td>85%</td><td>$0.77B</td><td>Most psychologically complex portrayal</td></tr>
+      </table>
+
+      <p style="font-size:13px;color:var(--text2);">Key takeaway: <em>"The 'greatest' question has no objective answer — it reveals more about what we value in the character than about the actors themselves."</em></p>
+      <p style="font-size:12px;color:var(--text2);">Sources: Wikipedia, Rotten Tomatoes, IMDb, IGN, Variety, The Hollywood Reporter, RogerEbert.com</p>
+    </div>
+  </div>
+
+  <!-- Installation -->
+  <div class="section">
+    <h2>📦 Install in 3 Minutes</h2>
+
+    <h3>Option 1: Use in Claude Desktop (MCP)</h3>
+    <div class="step-list">
+      <div class="step">
+        <strong>Clone & install:</strong>
+        <div class="code-block" style="margin-top:8px;">
+          <span class="cmd">git clone</span> https://github.com/mrdchiang/deepresearch.git<br>
+          <span class="cmd">cd</span> deepresearch<br>
+          <span class="cmd">pip install</span> -r requirements.txt
+        </div>
+      </div>
+      <div class="step">
+        <strong>Set your API key</strong> (any OpenAI-compatible provider: OpenAI, DeepSeek, Groq, etc.)
+        <div class="code-block" style="margin-top:8px;">
+          <span class="comment"># .env or shell</span><br>
+          <span class="cmd">export</span> OPENAI_API_KEY=<span class="comment">***</span><br>
+          <span class="cmd">export</span> OPENAI_BASE_URL=<span class="comment">https://api.deepseek.com/v1  # optional</span><br>
+          <span class="cmd">export</span> DEEPRESEARCH_MODEL=<span class="comment">deepseek-chat  # optional</span>
+        </div>
+      </div>
+      <div class="step">
+        <strong>Add to Claude Desktop config</strong> (macOS: <code>~/Library/Application Support/Claude/claude_desktop_config.json</code>)
+        <div class="code-block" style="margin-top:8px;">
+{<br>
+&nbsp;&nbsp;<span class="cmd">"mcpServers"</span>: {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="cmd">"deepresearch"</span>: {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cmd">"command"</span>: <span class="comment">"python"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cmd">"args"</span>: [<span class="comment">"/path/to/deepresearch/mcp_server.py"</span>],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cmd">"env"</span>: {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cmd">"OPENAI_API_KEY"</span>: <span class="comment">"***"</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;}<br>
+}
+        </div>
+      </div>
+      <div class="step">
+        <strong>Restart Claude Desktop.</strong> Now type <em>"Use deepresearch to investigate..."</em> and Claude will call the multi-agent pipeline. You'll get a full cited report in your chat.
+      </div>
+    </div>
+
+    <h3>Option 2: Use as a Web App</h3>
+    <div class="code-block">
+      <span class="cmd">python</span> server.py<br>
+      <span class="comment"># Open http://localhost:5000</span>
+    </div>
+    <p style="font-size:13px;color:var(--text2);margin-top:8px;">Clean web UI with live progress streaming. Host the <code>index.html</code> on GitHub Pages and run <code>server.py</code> on your machine.</p>
+
+    <h3>Option 3: Use in ChatGPT (Custom GPT)</h3>
+    <div class="step-list">
+      <div class="step">
+        <strong>Run the server:</strong> <code>python server.py</code> (or deploy to a VPS)
+      </div>
+      <div class="step">
+        <strong>Create a Custom GPT</strong> at <a href="https://chat.openai.com/gpts/editor">chat.openai.com/gpts/editor</a>
+      </div>
+      <div class="step">
+        <strong>Add an Action</strong> with this OpenAPI schema pointing to your server:
+        <div class="code-block" style="margin-top:8px;">
+{<br>
+&nbsp;&nbsp;<span class="cmd">"openapi"</span>: <span class="comment">"3.0.0"</span>,<br>
+&nbsp;&nbsp;<span class="cmd">"info"</span>: { <span class="cmd">"title"</span>: <span class="comment">"DeepResearch"</span> },<br>
+&nbsp;&nbsp;<span class="cmd">"servers"</span>: [{ <span class="cmd">"url"</span>: <span class="comment">"http://your-server:5000"</span> }],<br>
+&nbsp;&nbsp;<span class="cmd">"paths"</span>: {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="cmd">"/api/research"</span>: {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cmd">"post"</span>: { <span class="comment">/* standard POST with question + depth */</span> }<br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;}<br>
+}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Comparison -->
+  <div class="section">
+    <h2>vs. Microsoft Researcher</h2>
+    <table class="compare-table">
+      <tr><th>Capability</th><th>Microsoft Researcher</th><th>DeepResearch</th></tr>
+      <tr>
+        <td>Web search</td><td class="check">✓ Bing</td><td class="check">✓ DuckDuckGo (free)</td>
+      </tr>
+      <tr>
+        <td>Internal data</td><td class="check">✓ M365 Graph (email, files, chats)</td><td class="warn">✓ Obsidian vault + local files</td>
+      </tr>
+      <tr>
+        <td>Multi-agent reasoning</td><td class="check">✓</td><td class="check">✓ Planner → Searcher → Analyst → Synthesizer</td>
+      </tr>
+      <tr>
+        <td>Iterative gap analysis</td><td class="check">✓</td><td class="check">✓ Up to 4 iterations</td>
+      </tr>
+      <tr>
+        <td>Cited reports</td><td class="check">✓</td><td class="check">✓ [Source: URL] citations</td>
+      </tr>
+      <tr>
+        <td>Data tables & visuals</td><td class="check">✓</td><td class="check">✓ Tables in reports + Chart.js</td>
+      </tr>
+      <tr>
+        <td>2nd Brain / wiki export</td><td class="warn">✗</td><td class="check">✓ Obsidian wiki with [[wikilinks]]</td>
+      </tr>
+      <tr>
+        <td>Works in Claude Desktop</td><td class="warn">✗</td><td class="check">✓ MCP server</td>
+      </tr>
+      <tr>
+        <td>Works in ChatGPT</td><td class="warn">✗</td><td class="check">✓ REST API + GPT Action</td>
+      </tr>
+      <tr>
+        <td>Cost</td><td>M365 Copilot license</td><td class="check">Free (bring your own LLM key)</td>
+      </tr>
+      <tr>
+        <td>Open source</td><td class="warn">✗</td><td class="check">✓ MIT</td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- Quick Start -->
+  <div class="section">
+    <h2>⚡ One-Command Demo</h2>
+    <p style="font-size:14px;color:var(--text2);margin-bottom:12px;">No API key needed to see the demo in action:</p>
+    <div class="code-block">
+      <span class="cmd">git clone</span> https://github.com/mrdchiang/deepresearch<br>
+      <span class="cmd">cd</span> deepresearch<br>
+      <span class="cmd">pip install</span> -r requirements.txt<br>
+      <span class="cmd">python</span> demo_batman.py<br>
+      <span class="comment"># Open http://localhost:5000 — full Batman report pre-loaded</span>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <p>MIT License · Built with Python, Flask, DuckDuckGo, and any OpenAI-compatible LLM</p>
+    <p style="margin-top:8px;">
+      <a href="https://github.com/mrdchiang/deepresearch">GitHub</a> ·
+      MCP Server included · Works with Claude Desktop, ChatGPT, Cursor
+    </p>
+  </div>
 
 </div>
 
 <script>
-// ============================================================
-// State
-// ============================================================
-const $ = (s) => document.querySelector(s);
-
-let currentSessionId = null;
-let eventSource = null;
-const allFindings = [];
-const seenPhases = new Set();
-
-// ============================================================
-// Health check
-// ============================================================
-async function checkHealth() {
-  try {
-    const resp = await fetch(`${getServer()}/api/health`);
-    const data = await resp.json();
-    $("#healthDot").style.background = "var(--accent2)";
-    $("#healthText").textContent = `connected · ${data.model}`;
-  } catch {
-    $("#healthDot").style.background = "var(--danger)";
-    $("#healthText").textContent = "server offline";
-  }
-}
-checkHealth();
-setInterval(checkHealth, 15000);
-
-function getServer() {
-  return $("#serverUrl").value.replace(/\/+$/, "");
-}
-
-// ============================================================
-// Research flow
-// ============================================================
-async function startResearch() {
-  const question = $("#question").value.trim();
-  if (question.length < 10) {
-    alert("Please enter a research question (at least 10 characters).");
-    return;
-  }
-
-  // Reset
-  $("#reportContainer").classList.remove("active");
-  $("#reportContainer").innerHTML = "";
-  $("#errorArea").innerHTML = "";
-  allFindings.length = 0;
-  seenPhases.clear();
-  $("#findingFeed").innerHTML = "";
-
-  // Show progress
-  const panel = $("#progressPanel");
-  panel.classList.add("active");
-
-  const phases = ["planning", "searching", "analyzing", "synthesizing", "complete"];
-  const phaseNames = {planning:"Plan", searching:"Search", analyzing:"Analyze", synthesizing:"Synthesize", complete:"Complete"};
-  $("#phaseTimeline").innerHTML = phases.map(p =>
-    `<span class="phase-badge" data-phase="${p}">${phaseNames[p]}</span>`
-  ).join("");
-
-  $("#phaseLabel").textContent = "Starting...";
-  $("#statsLabel").textContent = "";
-  $("#spinner").style.display = "block";
-  $("#agentGrid").innerHTML = "";
-  $("#submitBtn").disabled = true;
-
-  // Init agent cards
-  const agents = ["Planner", "Searcher", "Analyst", "Synthesizer"];
-  $("#agentGrid").innerHTML = agents.map(a =>
-    `<div class="agent-card" data-agent="${a}">
-      <div class="agent-name">${a}</div>
-      <div class="agent-status">waiting</div>
-      <div class="agent-detail"></div>
-    </div>`
-  ).join("");
-
-  // Start research
-  try {
-    const depth = parseInt($("#depthSelect").value);
-    const resp = await fetch(`${getServer()}/api/research`, {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({question, depth}),
-    });
-    const data = await resp.json();
-
-    if (data.error) {
-      showError(data.error);
-      return;
-    }
-
-    currentSessionId = data.session_id;
-    connectSSE(currentSessionId);
-
-  } catch (e) {
-    showError(`Cannot connect to server at ${getServer()}. Make sure server.py is running.`);
-  }
-}
-
-function connectSSE(sessionId) {
-  if (eventSource) eventSource.close();
-
-  eventSource = new EventSource(`${getServer()}/api/research/${sessionId}/stream`);
-
-  eventSource.addEventListener("connected", (e) => {
-    updateAgent("Planner", "active", "Decomposing question...");
+// Check if local server is running
+fetch('http://localhost:5000/api/health')
+  .then(r => r.json())
+  .then(d => {
+    document.getElementById('localDemo').textContent = '🌐 Live Demo (running)';
+    document.getElementById('localDemo').style.borderColor = 'var(--accent2)';
+  })
+  .catch(() => {
+    document.getElementById('localDemo').textContent = '🌐 Live Demo (start server first)';
   });
-
-  eventSource.addEventListener("phase", (e) => {
-    const data = JSON.parse(e.data);
-    const phase = data.phase;
-    $("#phaseLabel").textContent = data.message || phase;
-    $("#statsLabel").textContent = data.iteration
-      ? `Iteration ${data.iteration}/${data.total_iterations || "?"}`
-      : "";
-
-    // Update phase badges
-    document.querySelectorAll(".phase-badge").forEach(badge => {
-      const bp = badge.dataset.phase;
-      const phaseOrder = ["planning", "searching", "analyzing", "synthesizing", "complete"];
-      const currentIdx = phaseOrder.indexOf(phase);
-      const badgeIdx = phaseOrder.indexOf(bp);
-      badge.classList.remove("active", "done");
-      if (badgeIdx === currentIdx) badge.classList.add("active");
-      if (badgeIdx < currentIdx) badge.classList.add("done");
-    });
-
-    // Update agent states
-    if (phase === "planning") updateAgent("Planner", "active", "Creating research plan...");
-    if (phase === "searching") {
-      updateAgent("Planner", "done", "Plan complete");
-      updateAgent("Searcher", "active", "Searching web...");
-    }
-    if (phase === "analyzing") {
-      updateAgent("Searcher", "done", "Search complete");
-      updateAgent("Analyst", "active", "Analyzing findings...");
-    }
-    if (phase === "synthesizing") {
-      updateAgent("Analyst", "done", "Analysis complete");
-      updateAgent("Synthesizer", "active", "Writing report...");
-    }
-    if (phase === "complete") {
-      updateAgent("Synthesizer", "done", "Report ready");
-      $("#spinner").style.display = "none";
-    }
-  });
-
-  eventSource.addEventListener("plan_complete", (e) => {
-    const data = JSON.parse(e.data);
-    updateAgent("Planner", "done", `${data.count} sub-questions planned`);
-  });
-
-  eventSource.addEventListener("agent_status", (e) => {
-    const data = JSON.parse(e.data);
-    if (data.agent === "Searcher") {
-      updateAgent("Searcher", "active", `${data.current}/${data.total}: ${data.query || ""}`.slice(0, 60));
-    }
-  });
-
-  eventSource.addEventListener("finding_complete", (e) => {
-    const data = JSON.parse(e.data);
-    allFindings.push(data);
-
-    const feed = $("#findingFeed");
-    const item = document.createElement("div");
-    item.className = "finding-item";
-    item.innerHTML = `<span class="finding-subq">${escapeHtml(data.sub_question)}</span>
-      <span class="finding-count">— ${data.facts_found} facts · ${data.quality || ""}</span>`;
-    feed.prepend(item);
-  });
-
-  eventSource.addEventListener("analysis_complete", (e) => {
-    const data = JSON.parse(e.data);
-    updateAgent("Analyst", "done", `Coverage: ${data.coverage_score}/10 · ${data.gaps?.length || 0} gaps`);
-    $("#statsLabel").textContent = `Coverage: ${data.coverage_score}/10 · ${allFindings.length} findings`;
-  });
-
-  eventSource.addEventListener("report_complete", (e) => {
-    const report = JSON.parse(e.data);
-    renderReport(report);
-    $("#progressPanel").classList.remove("active");
-    $("#submitBtn").disabled = false;
-  });
-
-  eventSource.addEventListener("error", (e) => {
-    try {
-      const data = JSON.parse(e.data);
-      showError(data.message);
-    } catch {
-      showError("Research failed — check server logs");
-    }
-  });
-
-  eventSource.addEventListener("done", (e) => {
-    const data = JSON.parse(e.data);
-    if (data.status === "error") {
-      showError("Research failed at the server.");
-    }
-    eventSource.close();
-    $("#submitBtn").disabled = false;
-  });
-
-  eventSource.onerror = () => {
-    // SSE connection lost — but research may still be running
-    // Poll the session endpoint
-    if (currentSessionId) {
-      setTimeout(pollSession, 2000);
-    }
-  };
-}
-
-async function pollSession() {
-  try {
-    const resp = await fetch(`${getServer()}/api/research/${currentSessionId}`);
-    const data = await resp.json();
-    if (data.report) {
-      renderReport(data.report);
-      $("#progressPanel").classList.remove("active");
-      $("#submitBtn").disabled = false;
-      updateAgent("Synthesizer", "done", "Report ready");
-      $("#spinner").style.display = "none";
-    } else if (data.status !== "complete" && data.status !== "error") {
-      setTimeout(pollSession, 2000);
-    } else if (data.error) {
-      showError(data.error);
-    }
-  } catch {
-    // Retry
-    setTimeout(pollSession, 3000);
-  }
-}
-
-// ============================================================
-// UI Helpers
-// ============================================================
-function updateAgent(name, status, detail) {
-  const card = document.querySelector(`.agent-card[data-agent="${name}"]`);
-  if (!card) return;
-  const statusEl = card.querySelector(".agent-status");
-  const detailEl = card.querySelector(".agent-detail");
-  statusEl.textContent = status;
-  statusEl.style.color = status === "active" ? "var(--accent)" : status === "done" ? "var(--accent2)" : "var(--text2)";
-  detailEl.textContent = detail || "";
-}
-
-function showError(msg) {
-  $("#progressPanel").classList.remove("active");
-  $("#submitBtn").disabled = false;
-  $("#spinner").style.display = "none";
-  $("#errorArea").innerHTML = `<div class="error-card">❌ ${escapeHtml(msg)}</div>`;
-}
-
-// ============================================================
-// Report Renderer
-// ============================================================
-function renderReport(report) {
-  const container = $("#reportContainer");
-  let html = "";
-
-  // Header
-  html += `<div class="report-header">
-    <h1 class="report-title">${escapeHtml(report.title || "Research Report")}</h1>
-    <div class="report-meta">Generated ${new Date().toLocaleDateString("en-US", {month:"long", day:"numeric", year:"numeric"})} · 
-    ${report.research_metadata?.iterations || "?"} iterations · 
-    ${report.research_metadata?.total_findings || "?"} findings · 
-    ${report.research_metadata?.sub_questions_asked || "?"} sub-questions</div>
-  </div>`;
-
-  // Executive summary
-  if (report.executive_summary) {
-    html += `<div class="exec-summary">
-      <strong style="color:var(--accent);">Executive Summary</strong><br><br>
-      ${formatContent(report.executive_summary)}
-    </div>`;
-  }
-
-  // Sections
-  if (report.sections) {
-    for (const section of report.sections) {
-      html += `<div class="report-section">`;
-      html += `<h2>${escapeHtml(section.heading || "")}</h2>`;
-      html += `<p>${formatContent(section.content || "")}</p>`;
-
-      // Table
-      if (section.table && section.table.headers && section.table.rows) {
-        html += `<div class="report-table-wrap"><table class="report-table">
-          <thead><tr>${section.table.headers.map(h => `<th>${escapeHtml(h)}</th>`).join("")}</tr></thead>
-          <tbody>${section.table.rows.map(row =>
-            `<tr>${row.map(c => `<td>${escapeHtml(String(c))}</td>`).join("")}</tr>`
-          ).join("")}</tbody>
-        </table></div>`;
-      }
-
-      // Subsections
-      if (section.subsections) {
-        for (const sub of section.subsections) {
-          html += `<h3>${escapeHtml(sub.heading || "")}</h3>`;
-          html += `<p>${formatContent(sub.content || "")}</p>`;
-        }
-      }
-
-      html += `</div>`;
-    }
-  }
-
-  // Key takeaways
-  if (report.key_takeaways?.length) {
-    html += `<h2 style="color:var(--accent2);">Key Takeaways</h2>`;
-    html += `<ul class="takeaway-list">${report.key_takeaways.map(t =>
-      `<li>${formatContent(t)}</li>`
-    ).join("")}</ul>`;
-  }
-
-  // Uncertainty
-  if (report.uncertainty_notes?.length) {
-    html += `<div class="uncertainty-box">
-      <h3>⚠ Areas of Uncertainty</h3>
-      <ul>${report.uncertainty_notes.map(u => `<li>${escapeHtml(u)}</li>`).join("")}</ul>
-    </div>`;
-  }
-
-  // Sources
-  if (report.sources?.length) {
-    html += `<h2>Sources</h2><ol class="source-list">`;
-    for (const s of report.sources) {
-      html += `<li><a href="${escapeHtml(s.url || "#")}" target="_blank" rel="noopener">${escapeHtml(s.title || s.url || "Source")}</a></li>`;
-    }
-    html += `</ol>`;
-  }
-
-  // Actions
-  html += `<div class="actions-bar">
-    <button class="btn btn-secondary" onclick="copyReport()">📋 Copy Report</button>
-    <button class="btn btn-secondary" onclick="downloadMD()">📥 Download Markdown</button>
-    <button class="btn btn-secondary" onclick="saveToVault()">🧠 Save to 2nd Brain</button>
-    <button class="btn btn-secondary" onclick="window.print()">🖨 Print</button>
-  </div>
-  <div id="vaultResult" style="margin-top:12px;font-size:13px;"></div>`;
-
-  container.innerHTML = html;
-  container.classList.add("active");
-
-  // Scroll to report
-  container.scrollIntoView({behavior: "smooth"});
-}
-
-function formatContent(text) {
-  // Convert [Source: name] citations to styled links
-  return escapeHtml(text).replace(
-    /\[Source:\s*([^\]]+)\]/g,
-    '<span class="citation">[$1]</span>'
-  );
-}
-
-async function copyReport() {
-  const text = $("#reportContainer").innerText;
-  await navigator.clipboard.writeText(text);
-  alert("Report copied to clipboard!");
-}
-
-async function downloadMD() {
-  if (!currentSessionId) return;
-  try {
-    const resp = await fetch(`${getServer()}/api/research/${currentSessionId}/report.md`);
-    const md = await resp.text();
-    const blob = new Blob([md], {type: "text/markdown"});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `research-${currentSessionId}.md`;
-    a.click();
-    URL.revokeObjectURL(url);
-  } catch {
-    alert("Failed to download. Is the server running?");
-  }
-}
-
-async function saveToVault() {
-  if (!currentSessionId) return;
-  const resultEl = document.getElementById("vaultResult");
-  if (!resultEl) return;
-
-  resultEl.innerHTML = `<span style="color:var(--accent);">🧠 Decomposing report into 2nd-brain wiki notes via LLM...</span>`;
-
-  try {
-    const resp = await fetch(`${getServer()}/api/research/${currentSessionId}/save-to-vault`, {
-      method: "POST",
-    });
-    const data = await resp.json();
-
-    if (data.error) {
-      resultEl.innerHTML = `<span style="color:var(--danger);">❌ ${escapeHtml(data.error)}</span>`;
-      return;
-    }
-
-    const filesList = data.files_created.map(f => `  • ${f}`).join("<br>");
-    resultEl.innerHTML = `
-      <div style="background:rgba(63,185,80,0.1);border:1px solid var(--accent2);border-radius:var(--radius);padding:14px;margin-top:8px;">
-        <strong style="color:var(--accent2);">✓ Saved to 2nd Brain!</strong><br>
-        <span style="color:var(--text2);">Vault: ${escapeHtml(data.vault_path)}</span><br>
-        <span style="color:var(--text2);">${data.count} wiki notes created:</span><br>
-        <span style="font-family:var(--mono);font-size:12px;">${filesList}</span>
-        <br><br><span style="font-size:12px;color:var(--text2);">Open in Obsidian to explore [[wikilinks]] and Graph View.</span>
-      </div>`;
-  } catch (e) {
-    resultEl.innerHTML = `<span style="color:var(--danger);">❌ Cannot reach server. Is server.py running?</span>`;
-  }
-}
-
-function escapeHtml(text) {
-  const div = document.createElement("div");
-  div.textContent = text;
-  return div.innerHTML;
-}
-
-// Enter key to submit
-$("#question").addEventListener("keydown", (e) => {
-  if (e.key === "Enter") startResearch();
-});
-
-// Auto-check health on load
-checkHealth();
 </script>
 
 </body>

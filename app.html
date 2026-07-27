@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DeepResearch — Multi-Agent Research System</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface2: #21262d;
+  --border: #30363d;
+  --text: #e6edf3;
+  --text2: #8b949e;
+  --accent: #58a6ff;
+  --accent2: #3fb950;
+  --warn: #d29922;
+  --danger: #f85149;
+  --purple: #bc8cff;
+  --radius: 8px;
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --mono: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.6;
+}
+
+/* Layout */
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px 20px 60px;
+}
+
+/* Header */
+.header {
+  text-align: center;
+  padding: 32px 0 20px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 32px;
+}
+.header h1 {
+  font-size: 28px;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.header p {
+  color: var(--text2);
+  font-size: 14px;
+  margin-top: 6px;
+}
+
+/* Input Area */
+.input-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 24px;
+}
+.input-card label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+.input-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.input-row input {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  color: var(--text);
+  font-size: 15px;
+  font-family: var(--font);
+  outline: none;
+  transition: border-color 0.2s;
+}
+.input-row input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15);
+}
+.input-row input::placeholder {
+  color: var(--text2);
+}
+.btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: var(--font);
+  white-space: nowrap;
+}
+.btn:hover { background: #4090e0; transform: translateY(-1px); }
+.btn:active { transform: translateY(0); }
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+.btn-secondary {
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.btn-secondary:hover { background: var(--border); }
+.btn-small {
+  padding: 6px 14px;
+  font-size: 12px;
+}
+
+/* Config row */
+.config-row {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  font-size: 13px;
+  color: var(--text2);
+  flex-wrap: wrap;
+}
+.config-row select {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  padding: 4px 8px;
+  font-size: 13px;
+}
+.config-row .server-url {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text2);
+  padding: 4px 10px;
+  font-size: 12px;
+  font-family: var(--mono);
+  width: 220px;
+}
+
+/* Progress Panel */
+.progress-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 24px;
+  display: none;
+}
+.progress-panel.active { display: block; }
+.progress-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.progress-header .phase-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+}
+.progress-header .stats {
+  font-size: 12px;
+  color: var(--text2);
+  margin-left: auto;
+}
+/* Agent status cards */
+.agent-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+}
+.agent-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  font-size: 13px;
+}
+.agent-card .agent-name {
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text2);
+}
+.agent-card .agent-status {
+  color: var(--accent2);
+  font-size: 12px;
+  margin-top: 2px;
+}
+.agent-card .agent-detail {
+  color: var(--text2);
+  font-size: 11px;
+  margin-top: 4px;
+  font-family: var(--mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Phase timeline */
+.phase-timeline {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.phase-badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--surface2);
+  color: var(--text2);
+}
+.phase-badge.active {
+  background: rgba(88, 166, 255, 0.15);
+  color: var(--accent);
+}
+.phase-badge.done {
+  background: rgba(63, 185, 80, 0.15);
+  color: var(--accent2);
+}
+
+/* Finding feed */
+.finding-feed {
+  margin-top: 16px;
+  max-height: 240px;
+  overflow-y: auto;
+  font-size: 12px;
+}
+.finding-item {
+  padding: 8px 12px;
+  border-left: 2px solid var(--accent);
+  margin-bottom: 6px;
+  background: var(--bg);
+  border-radius: 0 4px 4px 0;
+  animation: fadeIn 0.3s ease;
+}
+.finding-item .finding-subq {
+  color: var(--accent);
+  font-weight: 600;
+}
+.finding-item .finding-count {
+  color: var(--text2);
+}
+@keyframes fadeIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }
+
+/* Report */
+.report-container {
+  display: none;
+  animation: fadeIn 0.5s ease;
+}
+.report-container.active { display: block; }
+
+.report-header {
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.report-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.report-meta {
+  font-size: 13px;
+  color: var(--text2);
+}
+
+/* Report sections */
+.report-section {
+  margin-bottom: 28px;
+}
+.report-section h2 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--accent);
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+.report-section h3 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 16px 0 8px;
+}
+.report-section p {
+  font-size: 15px;
+  line-height: 1.75;
+  margin-bottom: 12px;
+}
+.report-section .citation {
+  color: var(--accent);
+  font-size: 13px;
+  text-decoration: none;
+  cursor: pointer;
+}
+.report-section .citation:hover {
+  text-decoration: underline;
+}
+
+/* Tables */
+.report-table-wrap {
+  overflow-x: auto;
+  margin: 16px 0;
+}
+.report-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.report-table th {
+  background: var(--surface2);
+  padding: 10px 14px;
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 2px solid var(--border);
+}
+.report-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.report-table tr:hover td {
+  background: rgba(88, 166, 255, 0.04);
+}
+
+/* Takeaways */
+.takeaway-list {
+  list-style: none;
+}
+.takeaway-list li {
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  background: var(--surface);
+  border-radius: var(--radius);
+  border-left: 3px solid var(--accent2);
+  font-size: 14px;
+}
+.takeaway-list li::before {
+  content: "→ ";
+  color: var(--accent2);
+  font-weight: 700;
+}
+
+/* Sources */
+.source-list {
+  list-style: none;
+  counter-reset: source;
+}
+.source-list li {
+  padding: 6px 0;
+  font-size: 13px;
+  counter-increment: source;
+}
+.source-list li::before {
+  content: "[" counter(source) "] ";
+  color: var(--text2);
+  font-weight: 600;
+}
+.source-list a {
+  color: var(--accent);
+  text-decoration: none;
+}
+.source-list a:hover { text-decoration: underline; }
+
+/* Uncertainty */
+.uncertainty-box {
+  background: rgba(210, 153, 34, 0.08);
+  border: 1px solid rgba(210, 153, 34, 0.3);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin: 16px 0;
+}
+.uncertainty-box h3 {
+  color: var(--warn);
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+.uncertainty-box li {
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+/* Error */
+.error-card {
+  background: rgba(248, 81, 73, 0.1);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin: 16px 0;
+  color: var(--danger);
+}
+
+/* Actions bar */
+.actions-bar {
+  display: flex;
+  gap: 10px;
+  margin-top: 24px;
+  flex-wrap: wrap;
+}
+
+/* Exec summary card */
+.exec-summary {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 28px;
+  font-size: 15px;
+  line-height: 1.75;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .container { padding: 16px; }
+  .input-row { flex-direction: column; }
+  .agent-grid { grid-template-columns: 1fr; }
+}
+
+/* Chart containers */
+.chart-wrap {
+  margin: 20px 0;
+  padding: 16px;
+  background: var(--surface);
+  border-radius: var(--radius);
+}
+.chart-wrap canvas { max-height: 300px; }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <h1>DeepResearch</h1>
+    <p>Tier 3 Multi-Agent Research — Planner → Searcher → Analyst → Synthesizer</p>
+  </div>
+
+  <!-- Input -->
+  <div class="input-card" id="inputCard">
+    <label for="question">Research Question</label>
+    <div class="input-row">
+      <input
+        type="text"
+        id="question"
+        placeholder="e.g., What are the economic impacts of AI on software engineering jobs by 2030?"
+        autocomplete="off"
+      >
+      <button class="btn" id="submitBtn" onclick="startResearch()">▶ Research</button>
+    </div>
+    <div class="config-row">
+      <label>
+        Depth:
+        <select id="depthSelect">
+          <option value="1">Quick (1 iteration)</option>
+          <option value="2">Standard (2 iterations)</option>
+          <option value="3" selected>Deep (3 iterations)</option>
+          <option value="4">Exhaustive (4 iterations)</option>
+        </select>
+      </label>
+      <label>Server: <input class="server-url" id="serverUrl" value="http://localhost:5000"></label>
+      <span id="healthDot" style="width:8px;height:8px;border-radius:50%;background:var(--text2);display:inline-block;"></span>
+      <span id="healthText" style="font-size:11px;color:var(--text2);">checking...</span>
+    </div>
+  </div>
+
+  <!-- Progress -->
+  <div class="progress-panel" id="progressPanel">
+    <div class="progress-header">
+      <div class="spinner" id="spinner"></div>
+      <span class="phase-label" id="phaseLabel">Planning...</span>
+      <span class="stats" id="statsLabel"></span>
+    </div>
+    <div class="phase-timeline" id="phaseTimeline"></div>
+    <div class="agent-grid" id="agentGrid"></div>
+    <div class="finding-feed" id="findingFeed"></div>
+  </div>
+
+  <!-- Report -->
+  <div class="report-container" id="reportContainer"></div>
+
+  <!-- Error -->
+  <div id="errorArea"></div>
+
+</div>
+
+<script>
+// ============================================================
+// State
+// ============================================================
+const $ = (s) => document.querySelector(s);
+
+let currentSessionId = null;
+let eventSource = null;
+const allFindings = [];
+const seenPhases = new Set();
+
+// ============================================================
+// Health check
+// ============================================================
+async function checkHealth() {
+  try {
+    const resp = await fetch(`${getServer()}/api/health`);
+    const data = await resp.json();
+    $("#healthDot").style.background = "var(--accent2)";
+    $("#healthText").textContent = `connected · ${data.model}`;
+  } catch {
+    $("#healthDot").style.background = "var(--danger)";
+    $("#healthText").textContent = "server offline";
+  }
+}
+checkHealth();
+setInterval(checkHealth, 15000);
+
+function getServer() {
+  return $("#serverUrl").value.replace(/\/+$/, "");
+}
+
+// ============================================================
+// Research flow
+// ============================================================
+async function startResearch() {
+  const question = $("#question").value.trim();
+  if (question.length < 10) {
+    alert("Please enter a research question (at least 10 characters).");
+    return;
+  }
+
+  // Reset
+  $("#reportContainer").classList.remove("active");
+  $("#reportContainer").innerHTML = "";
+  $("#errorArea").innerHTML = "";
+  allFindings.length = 0;
+  seenPhases.clear();
+  $("#findingFeed").innerHTML = "";
+
+  // Show progress
+  const panel = $("#progressPanel");
+  panel.classList.add("active");
+
+  const phases = ["planning", "searching", "analyzing", "synthesizing", "complete"];
+  const phaseNames = {planning:"Plan", searching:"Search", analyzing:"Analyze", synthesizing:"Synthesize", complete:"Complete"};
+  $("#phaseTimeline").innerHTML = phases.map(p =>
+    `<span class="phase-badge" data-phase="${p}">${phaseNames[p]}</span>`
+  ).join("");
+
+  $("#phaseLabel").textContent = "Starting...";
+  $("#statsLabel").textContent = "";
+  $("#spinner").style.display = "block";
+  $("#agentGrid").innerHTML = "";
+  $("#submitBtn").disabled = true;
+
+  // Init agent cards
+  const agents = ["Planner", "Searcher", "Analyst", "Synthesizer"];
+  $("#agentGrid").innerHTML = agents.map(a =>
+    `<div class="agent-card" data-agent="${a}">
+      <div class="agent-name">${a}</div>
+      <div class="agent-status">waiting</div>
+      <div class="agent-detail"></div>
+    </div>`
+  ).join("");
+
+  // Start research
+  try {
+    const depth = parseInt($("#depthSelect").value);
+    const resp = await fetch(`${getServer()}/api/research`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({question, depth}),
+    });
+    const data = await resp.json();
+
+    if (data.error) {
+      showError(data.error);
+      return;
+    }
+
+    currentSessionId = data.session_id;
+    connectSSE(currentSessionId);
+
+  } catch (e) {
+    showError(`Cannot connect to server at ${getServer()}. Make sure server.py is running.`);
+  }
+}
+
+function connectSSE(sessionId) {
+  if (eventSource) eventSource.close();
+
+  eventSource = new EventSource(`${getServer()}/api/research/${sessionId}/stream`);
+
+  eventSource.addEventListener("connected", (e) => {
+    updateAgent("Planner", "active", "Decomposing question...");
+  });
+
+  eventSource.addEventListener("phase", (e) => {
+    const data = JSON.parse(e.data);
+    const phase = data.phase;
+    $("#phaseLabel").textContent = data.message || phase;
+    $("#statsLabel").textContent = data.iteration
+      ? `Iteration ${data.iteration}/${data.total_iterations || "?"}`
+      : "";
+
+    // Update phase badges
+    document.querySelectorAll(".phase-badge").forEach(badge => {
+      const bp = badge.dataset.phase;
+      const phaseOrder = ["planning", "searching", "analyzing", "synthesizing", "complete"];
+      const currentIdx = phaseOrder.indexOf(phase);
+      const badgeIdx = phaseOrder.indexOf(bp);
+      badge.classList.remove("active", "done");
+      if (badgeIdx === currentIdx) badge.classList.add("active");
+      if (badgeIdx < currentIdx) badge.classList.add("done");
+    });
+
+    // Update agent states
+    if (phase === "planning") updateAgent("Planner", "active", "Creating research plan...");
+    if (phase === "searching") {
+      updateAgent("Planner", "done", "Plan complete");
+      updateAgent("Searcher", "active", "Searching web...");
+    }
+    if (phase === "analyzing") {
+      updateAgent("Searcher", "done", "Search complete");
+      updateAgent("Analyst", "active", "Analyzing findings...");
+    }
+    if (phase === "synthesizing") {
+      updateAgent("Analyst", "done", "Analysis complete");
+      updateAgent("Synthesizer", "active", "Writing report...");
+    }
+    if (phase === "complete") {
+      updateAgent("Synthesizer", "done", "Report ready");
+      $("#spinner").style.display = "none";
+    }
+  });
+
+  eventSource.addEventListener("plan_complete", (e) => {
+    const data = JSON.parse(e.data);
+    updateAgent("Planner", "done", `${data.count} sub-questions planned`);
+  });
+
+  eventSource.addEventListener("agent_status", (e) => {
+    const data = JSON.parse(e.data);
+    if (data.agent === "Searcher") {
+      updateAgent("Searcher", "active", `${data.current}/${data.total}: ${data.query || ""}`.slice(0, 60));
+    }
+  });
+
+  eventSource.addEventListener("finding_complete", (e) => {
+    const data = JSON.parse(e.data);
+    allFindings.push(data);
+
+    const feed = $("#findingFeed");
+    const item = document.createElement("div");
+    item.className = "finding-item";
+    item.innerHTML = `<span class="finding-subq">${escapeHtml(data.sub_question)}</span>
+      <span class="finding-count">— ${data.facts_found} facts · ${data.quality || ""}</span>`;
+    feed.prepend(item);
+  });
+
+  eventSource.addEventListener("analysis_complete", (e) => {
+    const data = JSON.parse(e.data);
+    updateAgent("Analyst", "done", `Coverage: ${data.coverage_score}/10 · ${data.gaps?.length || 0} gaps`);
+    $("#statsLabel").textContent = `Coverage: ${data.coverage_score}/10 · ${allFindings.length} findings`;
+  });
+
+  eventSource.addEventListener("report_complete", (e) => {
+    const report = JSON.parse(e.data);
+    renderReport(report);
+    $("#progressPanel").classList.remove("active");
+    $("#submitBtn").disabled = false;
+  });
+
+  eventSource.addEventListener("error", (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      showError(data.message);
+    } catch {
+      showError("Research failed — check server logs");
+    }
+  });
+
+  eventSource.addEventListener("done", (e) => {
+    const data = JSON.parse(e.data);
+    if (data.status === "error") {
+      showError("Research failed at the server.");
+    }
+    eventSource.close();
+    $("#submitBtn").disabled = false;
+  });
+
+  eventSource.onerror = () => {
+    // SSE connection lost — but research may still be running
+    // Poll the session endpoint
+    if (currentSessionId) {
+      setTimeout(pollSession, 2000);
+    }
+  };
+}
+
+async function pollSession() {
+  try {
+    const resp = await fetch(`${getServer()}/api/research/${currentSessionId}`);
+    const data = await resp.json();
+    if (data.report) {
+      renderReport(data.report);
+      $("#progressPanel").classList.remove("active");
+      $("#submitBtn").disabled = false;
+      updateAgent("Synthesizer", "done", "Report ready");
+      $("#spinner").style.display = "none";
+    } else if (data.status !== "complete" && data.status !== "error") {
+      setTimeout(pollSession, 2000);
+    } else if (data.error) {
+      showError(data.error);
+    }
+  } catch {
+    // Retry
+    setTimeout(pollSession, 3000);
+  }
+}
+
+// ============================================================
+// UI Helpers
+// ============================================================
+function updateAgent(name, status, detail) {
+  const card = document.querySelector(`.agent-card[data-agent="${name}"]`);
+  if (!card) return;
+  const statusEl = card.querySelector(".agent-status");
+  const detailEl = card.querySelector(".agent-detail");
+  statusEl.textContent = status;
+  statusEl.style.color = status === "active" ? "var(--accent)" : status === "done" ? "var(--accent2)" : "var(--text2)";
+  detailEl.textContent = detail || "";
+}
+
+function showError(msg) {
+  $("#progressPanel").classList.remove("active");
+  $("#submitBtn").disabled = false;
+  $("#spinner").style.display = "none";
+  $("#errorArea").innerHTML = `<div class="error-card">❌ ${escapeHtml(msg)}</div>`;
+}
+
+// ============================================================
+// Report Renderer
+// ============================================================
+function renderReport(report) {
+  const container = $("#reportContainer");
+  let html = "";
+
+  // Header
+  html += `<div class="report-header">
+    <h1 class="report-title">${escapeHtml(report.title || "Research Report")}</h1>
+    <div class="report-meta">Generated ${new Date().toLocaleDateString("en-US", {month:"long", day:"numeric", year:"numeric"})} · 
+    ${report.research_metadata?.iterations || "?"} iterations · 
+    ${report.research_metadata?.total_findings || "?"} findings · 
+    ${report.research_metadata?.sub_questions_asked || "?"} sub-questions</div>
+  </div>`;
+
+  // Executive summary
+  if (report.executive_summary) {
+    html += `<div class="exec-summary">
+      <strong style="color:var(--accent);">Executive Summary</strong><br><br>
+      ${formatContent(report.executive_summary)}
+    </div>`;
+  }
+
+  // Sections
+  if (report.sections) {
+    for (const section of report.sections) {
+      html += `<div class="report-section">`;
+      html += `<h2>${escapeHtml(section.heading || "")}</h2>`;
+      html += `<p>${formatContent(section.content || "")}</p>`;
+
+      // Table
+      if (section.table && section.table.headers && section.table.rows) {
+        html += `<div class="report-table-wrap"><table class="report-table">
+          <thead><tr>${section.table.headers.map(h => `<th>${escapeHtml(h)}</th>`).join("")}</tr></thead>
+          <tbody>${section.table.rows.map(row =>
+            `<tr>${row.map(c => `<td>${escapeHtml(String(c))}</td>`).join("")}</tr>`
+          ).join("")}</tbody>
+        </table></div>`;
+      }
+
+      // Subsections
+      if (section.subsections) {
+        for (const sub of section.subsections) {
+          html += `<h3>${escapeHtml(sub.heading || "")}</h3>`;
+          html += `<p>${formatContent(sub.content || "")}</p>`;
+        }
+      }
+
+      html += `</div>`;
+    }
+  }
+
+  // Key takeaways
+  if (report.key_takeaways?.length) {
+    html += `<h2 style="color:var(--accent2);">Key Takeaways</h2>`;
+    html += `<ul class="takeaway-list">${report.key_takeaways.map(t =>
+      `<li>${formatContent(t)}</li>`
+    ).join("")}</ul>`;
+  }
+
+  // Uncertainty
+  if (report.uncertainty_notes?.length) {
+    html += `<div class="uncertainty-box">
+      <h3>⚠ Areas of Uncertainty</h3>
+      <ul>${report.uncertainty_notes.map(u => `<li>${escapeHtml(u)}</li>`).join("")}</ul>
+    </div>`;
+  }
+
+  // Sources
+  if (report.sources?.length) {
+    html += `<h2>Sources</h2><ol class="source-list">`;
+    for (const s of report.sources) {
+      html += `<li><a href="${escapeHtml(s.url || "#")}" target="_blank" rel="noopener">${escapeHtml(s.title || s.url || "Source")}</a></li>`;
+    }
+    html += `</ol>`;
+  }
+
+  // Actions
+  html += `<div class="actions-bar">
+    <button class="btn btn-secondary" onclick="copyReport()">📋 Copy Report</button>
+    <button class="btn btn-secondary" onclick="downloadMD()">📥 Download Markdown</button>
+    <button class="btn btn-secondary" onclick="saveToVault()">🧠 Save to 2nd Brain</button>
+    <button class="btn btn-secondary" onclick="window.print()">🖨 Print</button>
+  </div>
+  <div id="vaultResult" style="margin-top:12px;font-size:13px;"></div>`;
+
+  container.innerHTML = html;
+  container.classList.add("active");
+
+  // Scroll to report
+  container.scrollIntoView({behavior: "smooth"});
+}
+
+function formatContent(text) {
+  // Convert [Source: name] citations to styled links
+  return escapeHtml(text).replace(
+    /\[Source:\s*([^\]]+)\]/g,
+    '<span class="citation">[$1]</span>'
+  );
+}
+
+async function copyReport() {
+  const text = $("#reportContainer").innerText;
+  await navigator.clipboard.writeText(text);
+  alert("Report copied to clipboard!");
+}
+
+async function downloadMD() {
+  if (!currentSessionId) return;
+  try {
+    const resp = await fetch(`${getServer()}/api/research/${currentSessionId}/report.md`);
+    const md = await resp.text();
+    const blob = new Blob([md], {type: "text/markdown"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `research-${currentSessionId}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch {
+    alert("Failed to download. Is the server running?");
+  }
+}
+
+async function saveToVault() {
+  if (!currentSessionId) return;
+  const resultEl = document.getElementById("vaultResult");
+  if (!resultEl) return;
+
+  resultEl.innerHTML = `<span style="color:var(--accent);">🧠 Decomposing report into 2nd-brain wiki notes via LLM...</span>`;
+
+  try {
+    const resp = await fetch(`${getServer()}/api/research/${currentSessionId}/save-to-vault`, {
+      method: "POST",
+    });
+    const data = await resp.json();
+
+    if (data.error) {
+      resultEl.innerHTML = `<span style="color:var(--danger);">❌ ${escapeHtml(data.error)}</span>`;
+      return;
+    }
+
+    const filesList = data.files_created.map(f => `  • ${f}`).join("<br>");
+    resultEl.innerHTML = `
+      <div style="background:rgba(63,185,80,0.1);border:1px solid var(--accent2);border-radius:var(--radius);padding:14px;margin-top:8px;">
+        <strong style="color:var(--accent2);">✓ Saved to 2nd Brain!</strong><br>
+        <span style="color:var(--text2);">Vault: ${escapeHtml(data.vault_path)}</span><br>
+        <span style="color:var(--text2);">${data.count} wiki notes created:</span><br>
+        <span style="font-family:var(--mono);font-size:12px;">${filesList}</span>
+        <br><br><span style="font-size:12px;color:var(--text2);">Open in Obsidian to explore [[wikilinks]] and Graph View.</span>
+      </div>`;
+  } catch (e) {
+    resultEl.innerHTML = `<span style="color:var(--danger);">❌ Cannot reach server. Is server.py running?</span>`;
+  }
+}
+
+function escapeHtml(text) {
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// Enter key to submit
+$("#question").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") startResearch();
+});
+
+// Auto-check health on load
+checkHealth();
+</script>
+
+</body>
+</html>
