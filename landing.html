@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DeepResearch — Open-Source Microsoft Researcher Alternative</title>
+<style>
+:root {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface2: #21262d;
+  --border: #30363d;
+  --text: #e6edf3;
+  --text2: #8b949e;
+  --accent: #58a6ff;
+  --accent2: #3fb950;
+  --purple: #bc8cff;
+  --warn: #d29922;
+  --radius: 8px;
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --mono: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.6; }
+.container { max-width: 900px; margin: 0 auto; padding: 24px 20px 80px; }
+
+/* Hero */
+.hero { text-align: center; padding: 48px 0 32px; }
+.hero h1 {
+  font-size: 42px; font-weight: 800;
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.hero .tagline { font-size: 18px; color: var(--text2); margin: 12px 0 24px; max-width: 600px; margin-left: auto; margin-right: auto; }
+.hero .badges { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.badge {
+  padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
+  background: var(--surface2); border: 1px solid var(--border);
+}
+
+/* Buttons */
+.btn-row { display: flex; gap: 12px; justify-content: center; margin: 24px 0; flex-wrap: wrap; }
+.btn {
+  padding: 12px 28px; border-radius: var(--radius); font-size: 14px; font-weight: 600;
+  text-decoration: none; cursor: pointer; transition: all 0.2s; border: none;
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: #4090e0; transform: translateY(-1px); }
+.btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+.btn-secondary:hover { background: var(--border); }
+
+/* Sections */
+.section { margin: 48px 0; }
+.section h2 { font-size: 24px; margin-bottom: 16px; color: var(--accent); }
+.section h3 { font-size: 16px; margin: 16px 0 8px; }
+
+/* Pipeline diagram */
+.pipeline {
+  display: flex; gap: 8px; justify-content: center; align-items: center;
+  flex-wrap: wrap; margin: 24px 0; font-size: 13px;
+}
+.pipeline-step {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 14px 18px; text-align: center; min-width: 90px;
+}
+.pipeline-step .emoji { font-size: 24px; }
+.pipeline-step .label { font-weight: 600; margin-top: 6px; }
+.pipeline-step .sub { font-size: 11px; color: var(--text2); margin-top: 2px; }
+.pipeline-arrow { color: var(--accent); font-size: 20px; }
+
+/* Code blocks */
+.code-block {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 16px 20px; font-family: var(--mono); font-size: 13px;
+  overflow-x: auto; margin: 12px 0; position: relative;
+}
+.code-block .copy-btn {
+  position: absolute; top: 10px; right: 10px;
+  background: var(--surface2); border: 1px solid var(--border); color: var(--text2);
+  border-radius: 4px; padding: 2px 10px; font-size: 11px; cursor: pointer;
+}
+.code-block .comment { color: var(--text2); }
+.code-block .cmd { color: var(--accent2); }
+
+/* Feature grid */
+.feature-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px; margin: 20px 0;
+}
+.feature-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 20px;
+}
+.feature-card h3 { font-size: 15px; margin: 0 0 8px; color: var(--accent2); }
+.feature-card p { font-size: 13px; color: var(--text2); line-height: 1.6; }
+
+/* Demo section */
+.demo-box {
+  background: var(--surface); border: 1px solid var(--accent2); border-radius: var(--radius);
+  padding: 24px; margin: 20px 0; position: relative;
+}
+.demo-box::before {
+  content: "🦇 LIVE DEMO"; position: absolute; top: -10px; left: 20px;
+  background: var(--accent2); color: #000; padding: 2px 12px; border-radius: 10px;
+  font-size: 11px; font-weight: 700;
+}
+
+/* Steps */
+.step-list { counter-reset: step; }
+.step {
+  counter-increment: step; margin: 16px 0; padding: 14px 18px;
+  background: var(--surface); border-radius: var(--radius);
+  border-left: 3px solid var(--accent);
+}
+.step::before { content: counter(step); color: var(--accent); font-weight: 700; font-size: 14px; margin-right: 12px; }
+.step strong { color: var(--text); }
+.step code { background: var(--surface2); padding: 1px 6px; border-radius: 3px; font-size: 12px; }
+
+/* Comparison table */
+.compare-table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+.compare-table th { background: var(--surface2); padding: 10px 14px; text-align: left; }
+.compare-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); }
+.compare-table .check { color: var(--accent2); }
+.compare-table .warn { color: var(--warn); }
+
+/* Footer */
+.footer { text-align: center; padding: 32px 0; color: var(--text2); font-size: 13px; border-top: 1px solid var(--border); margin-top: 48px; }
+.footer a { color: var(--accent); }
+
+/* Responsive */
+@media (max-width: 640px) {
+  .hero h1 { font-size: 28px; }
+  .pipeline { flex-direction: column; }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Hero -->
+  <div class="hero">
+    <h1>DeepResearch</h1>
+    <p class="tagline">
+      Open-source alternative to Microsoft Researcher. Multi-agent AI that decomposes questions,
+      searches the web, analyzes gaps, and produces structured cited reports.
+    </p>
+    <div class="badges">
+      <span class="badge">4-Agent Pipeline</span>
+      <span class="badge">Free Web Search</span>
+      <span class="badge">Claude + ChatGPT Ready</span>
+      <span class="badge">Obsidian 2nd Brain</span>
+      <span class="badge">MCP Server</span>
+    </div>
+    <div class="btn-row">
+      <a href="https://github.com/mrdchiang/deepresearch" class="btn btn-primary">📦 GitHub Repo</a>
+      <a href="http://localhost:5000" class="btn btn-secondary" id="localDemo">🌐 Live Demo</a>
+    </div>
+  </div>
+
+  <!-- Pipeline -->
+  <div class="section">
+    <h2>How It Works</h2>
+    <div class="pipeline">
+      <div class="pipeline-step">
+        <div class="emoji">🧠</div><div class="label">Planner</div>
+        <div class="sub">decomposes question</div>
+      </div>
+      <div class="pipeline-arrow">→</div>
+      <div class="pipeline-step">
+        <div class="emoji">🔍</div><div class="label">Searcher</div>
+        <div class="sub">web search × N angles</div>
+      </div>
+      <div class="pipeline-arrow">→</div>
+      <div class="pipeline-step">
+        <div class="emoji">📊</div><div class="label">Analyst</div>
+        <div class="sub">finds gaps, scores</div>
+      </div>
+      <div class="pipeline-arrow">→</div>
+      <div class="pipeline-step">
+        <div class="emoji">✍️</div><div class="label">Synthesizer</div>
+        <div class="sub">cited report</div>
+      </div>
+    </div>
+    <p style="text-align:center;font-size:13px;color:var(--text2);">Iterates up to 4 times — each pass searches new angles discovered in the analysis</p>
+  </div>
+
+  <!-- Features -->
+  <div class="section">
+    <h2>Features</h2>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <h3>🔍 Multi-Agent Pipeline</h3>
+        <p>4 specialized agents (Planner, Searcher, Analyst, Synthesizer) work together in an iterative loop — searching, analyzing gaps, and repeating until comprehensive.</p>
+      </div>
+      <div class="feature-card">
+        <h3>📚 Source-Cited Reports</h3>
+        <p>Every finding links to its origin URL. Reports include executive summary, structured sections, data tables, key takeaways, and areas of uncertainty.</p>
+      </div>
+      <div class="feature-card">
+        <h3>🧠 2nd Brain Integration</h3>
+        <p>Save research to your Obsidian vault as interlinked wiki notes with YAML frontmatter and [[wikilinks]] — fully searchable by other LLMs.</p>
+      </div>
+      <div class="feature-card">
+        <h3>🆓 Free Web Search</h3>
+        <p>Uses DuckDuckGo — no API key needed for web search. Only the LLM calls need an API key (any OpenAI-compatible provider works).</p>
+      </div>
+      <div class="feature-card">
+        <h3>🔌 MCP Server</h3>
+        <p>Works as a native MCP tool inside Claude Desktop, ChatGPT, Cursor, and any MCP-compatible client. Research from your chat, not a separate app.</p>
+      </div>
+      <div class="feature-card">
+        <h3>🎨 Dark-Themed UI</h3>
+        <p>Clean web interface with live progress streaming (SSE), agent status cards, and interactive report viewer. Host anywhere or use the MCP mode.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Demo -->
+  <div class="section">
+    <div class="demo-box">
+      <h3 style="margin-top:0;">Try It: "Which actor is the greatest Batman?"</h3>
+      <p style="color:var(--text2);font-size:14px;margin:8px 0 16px;">
+        Pre-loaded demo session showing the full research output: 6 sections, 10 cited sources,
+        6 key takeaways, data tables, and uncertainty notes. No API key needed to view.
+      </p>
+      <strong style="font-size:20px;">🦇 Who Is the Greatest Batman Actor? A Multi-Dimensional Analysis</strong>
+      <p style="margin:8px 0;font-size:14px;">After analyzing critical reception, box office performance, cultural impact, and acting craft across 8 Batman actors from 1943–2026, <strong>Christian Bale</strong> leads in critical consensus and box office, while <strong>Kevin Conroy</strong> dominates as the definitive voice. However, "greatest" depends on criteria: Bale for realism, Keaton for trailblazing, Conroy for fidelity to source material, and Pattinson for psychological complexity.</p>
+
+      <table class="compare-table">
+        <tr><th>Actor</th><th>RT Avg</th><th>Box Office</th><th>Legacy</th></tr>
+        <tr><td>Christian Bale</td><td>92%</td><td>$2.46B</td><td>Elevated superhero films to prestige cinema</td></tr>
+        <tr><td>Kevin Conroy</td><td>95% (fans)</td><td>N/A</td><td>Definitive voice across 30 years</td></tr>
+        <tr><td>Michael Keaton</td><td>78%</td><td>$1.19B</td><td>Proved dark Batman could succeed</td></tr>
+        <tr><td>Robert Pattinson</td><td>85%</td><td>$0.77B</td><td>Most psychologically complex portrayal</td></tr>
+      </table>
+
+      <p style="font-size:13px;color:var(--text2);">Key takeaway: <em>"The 'greatest' question has no objective answer — it reveals more about what we value in the character than about the actors themselves."</em></p>
+      <p style="font-size:12px;color:var(--text2);">Sources: Wikipedia, Rotten Tomatoes, IMDb, IGN, Variety, The Hollywood Reporter, RogerEbert.com</p>
+    </div>
+  </div>
+
+  <!-- Installation -->
+  <div class="section">
+    <h2>📦 Install in 3 Minutes</h2>
+
+    <h3>Option 1: Use in Claude Desktop (MCP)</h3>
+    <div class="step-list">
+      <div class="step">
+        <strong>Clone & install:</strong>
+        <div class="code-block" style="margin-top:8px;">
+          <span class="cmd">git clone</span> https://github.com/mrdchiang/deepresearch.git<br>
+          <span class="cmd">cd</span> deepresearch<br>
+          <span class="cmd">pip install</span> -r requirements.txt
+        </div>
+      </div>
+      <div class="step">
+        <strong>Set your API key</strong> (any OpenAI-compatible provider: OpenAI, DeepSeek, Groq, etc.)
+        <div class="code-block" style="margin-top:8px;">
+          <span class="comment"># .env or shell</span><br>
+          <span class="cmd">export</span> OPENAI_API_KEY=<span class="comment">***</span><br>
+          <span class="cmd">export</span> OPENAI_BASE_URL=<span class="comment">https://api.deepseek.com/v1  # optional</span><br>
+          <span class="cmd">export</span> DEEPRESEARCH_MODEL=<span class="comment">deepseek-chat  # optional</span>
+        </div>
+      </div>
+      <div class="step">
+        <strong>Add to Claude Desktop config</strong> (macOS: <code>~/Library/Application Support/Claude/claude_desktop_config.json</code>)
+        <div class="code-block" style="margin-top:8px;">
+{<br>
+&nbsp;&nbsp;<span class="cmd">"mcpServers"</span>: {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="cmd">"deepresearch"</span>: {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cmd">"command"</span>: <span class="comment">"python"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cmd">"args"</span>: [<span class="comment">"/path/to/deepresearch/mcp_server.py"</span>],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cmd">"env"</span>: {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cmd">"OPENAI_API_KEY"</span>: <span class="comment">"***"</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;}<br>
+}
+        </div>
+      </div>
+      <div class="step">
+        <strong>Restart Claude Desktop.</strong> Now type <em>"Use deepresearch to investigate..."</em> and Claude will call the multi-agent pipeline. You'll get a full cited report in your chat.
+      </div>
+    </div>
+
+    <h3>Option 2: Use as a Web App</h3>
+    <div class="code-block">
+      <span class="cmd">python</span> server.py<br>
+      <span class="comment"># Open http://localhost:5000</span>
+    </div>
+    <p style="font-size:13px;color:var(--text2);margin-top:8px;">Clean web UI with live progress streaming. Host the <code>index.html</code> on GitHub Pages and run <code>server.py</code> on your machine.</p>
+
+    <h3>Option 3: Use in ChatGPT (Custom GPT)</h3>
+    <div class="step-list">
+      <div class="step">
+        <strong>Run the server:</strong> <code>python server.py</code> (or deploy to a VPS)
+      </div>
+      <div class="step">
+        <strong>Create a Custom GPT</strong> at <a href="https://chat.openai.com/gpts/editor">chat.openai.com/gpts/editor</a>
+      </div>
+      <div class="step">
+        <strong>Add an Action</strong> with this OpenAPI schema pointing to your server:
+        <div class="code-block" style="margin-top:8px;">
+{<br>
+&nbsp;&nbsp;<span class="cmd">"openapi"</span>: <span class="comment">"3.0.0"</span>,<br>
+&nbsp;&nbsp;<span class="cmd">"info"</span>: { <span class="cmd">"title"</span>: <span class="comment">"DeepResearch"</span> },<br>
+&nbsp;&nbsp;<span class="cmd">"servers"</span>: [{ <span class="cmd">"url"</span>: <span class="comment">"http://your-server:5000"</span> }],<br>
+&nbsp;&nbsp;<span class="cmd">"paths"</span>: {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="cmd">"/api/research"</span>: {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cmd">"post"</span>: { <span class="comment">/* standard POST with question + depth */</span> }<br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;}<br>
+}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Comparison -->
+  <div class="section">
+    <h2>vs. Microsoft Researcher</h2>
+    <table class="compare-table">
+      <tr><th>Capability</th><th>Microsoft Researcher</th><th>DeepResearch</th></tr>
+      <tr>
+        <td>Web search</td><td class="check">✓ Bing</td><td class="check">✓ DuckDuckGo (free)</td>
+      </tr>
+      <tr>
+        <td>Internal data</td><td class="check">✓ M365 Graph (email, files, chats)</td><td class="warn">✓ Obsidian vault + local files</td>
+      </tr>
+      <tr>
+        <td>Multi-agent reasoning</td><td class="check">✓</td><td class="check">✓ Planner → Searcher → Analyst → Synthesizer</td>
+      </tr>
+      <tr>
+        <td>Iterative gap analysis</td><td class="check">✓</td><td class="check">✓ Up to 4 iterations</td>
+      </tr>
+      <tr>
+        <td>Cited reports</td><td class="check">✓</td><td class="check">✓ [Source: URL] citations</td>
+      </tr>
+      <tr>
+        <td>Data tables & visuals</td><td class="check">✓</td><td class="check">✓ Tables in reports + Chart.js</td>
+      </tr>
+      <tr>
+        <td>2nd Brain / wiki export</td><td class="warn">✗</td><td class="check">✓ Obsidian wiki with [[wikilinks]]</td>
+      </tr>
+      <tr>
+        <td>Works in Claude Desktop</td><td class="warn">✗</td><td class="check">✓ MCP server</td>
+      </tr>
+      <tr>
+        <td>Works in ChatGPT</td><td class="warn">✗</td><td class="check">✓ REST API + GPT Action</td>
+      </tr>
+      <tr>
+        <td>Cost</td><td>M365 Copilot license</td><td class="check">Free (bring your own LLM key)</td>
+      </tr>
+      <tr>
+        <td>Open source</td><td class="warn">✗</td><td class="check">✓ MIT</td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- Quick Start -->
+  <div class="section">
+    <h2>⚡ One-Command Demo</h2>
+    <p style="font-size:14px;color:var(--text2);margin-bottom:12px;">No API key needed to see the demo in action:</p>
+    <div class="code-block">
+      <span class="cmd">git clone</span> https://github.com/mrdchiang/deepresearch<br>
+      <span class="cmd">cd</span> deepresearch<br>
+      <span class="cmd">pip install</span> -r requirements.txt<br>
+      <span class="cmd">python</span> demo_batman.py<br>
+      <span class="comment"># Open http://localhost:5000 — full Batman report pre-loaded</span>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <p>MIT License · Built with Python, Flask, DuckDuckGo, and any OpenAI-compatible LLM</p>
+    <p style="margin-top:8px;">
+      <a href="https://github.com/mrdchiang/deepresearch">GitHub</a> ·
+      MCP Server included · Works with Claude Desktop, ChatGPT, Cursor
+    </p>
+  </div>
+
+</div>
+
+<script>
+// Check if local server is running
+fetch('http://localhost:5000/api/health')
+  .then(r => r.json())
+  .then(d => {
+    document.getElementById('localDemo').textContent = '🌐 Live Demo (running)';
+    document.getElementById('localDemo').style.borderColor = 'var(--accent2)';
+  })
+  .catch(() => {
+    document.getElementById('localDemo').textContent = '🌐 Live Demo (start server first)';
+  });
+</script>
+
+</body>
+</html>
