@@ -31,6 +31,27 @@ python server.py
 # 4. Open http://localhost:5000
 ```
 
+## Who Already Has This?
+
+Deep research is not new — every major AI platform now has a version. Here's how they compare:
+
+| Platform | Web Search | Internal Data | Multi-Agent | Citations | Open Source | 2nd Brain |
+|---|---|---|---|---|---|---|
+| **Microsoft Researcher** | ✓ Bing | ✓ M365 Graph (email, files, chats) | ✓ | ✓ | ✗ | ✗ |
+| **ChatGPT Deep Research** | ✓ | ✓ Uploaded files | ✓ | ✓ | ✗ | ✗ |
+| **Google Gemini Deep Research** | ✓ | ✓ Gmail, Drive, Sheets | ✓ | ✓ | ✗ | ✗ |
+| **Perplexity Deep Research** | ✓ | ✗ | ✓ | ✓ (best) | ✗ | ✗ |
+| **Claude** | ✗ (limited) | ✗ | ✗ | ✗ | ✗ | ✗ |
+| **Grok (xAI)** | ✓ | ✗ | ✓ | ✓ | ✗ | ✗ |
+| **DeepResearch (this)** | ✓ DuckDuckGo | ✓ Obsidian vault + local files | ✓ | ✓ | ✓ MIT | ✓ Obsidian wiki |
+
+**What makes this different:**
+- **Not locked to one provider** — use OpenAI, DeepSeek, Groq, or any OpenAI-compatible API
+- **Runs anywhere** — local machine, VPS, or as an MCP server inside Claude Desktop/ChatGPT
+- **Your data stays with you** — no cloud dependency, no subscription
+- **Obsidian 2nd brain** — research persists as interlinked wiki notes, searchable by other LLMs
+- **Free web search** — DuckDuckGo, no API key needed
+
 ## How It Works
 
 ### The 4-Agent Pipeline
