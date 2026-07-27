@@ -795,10 +795,21 @@ function renderReport(report) {
     </div>`;
   }
 
+  // Table of Contents (for reports with 4+ sections)
+  if (report.sections && report.sections.length >= 4) {
+    html += `<div class="toc" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:24px;">
+      <strong style="color:var(--accent);font-size:14px;">📑 Table of Contents</strong>
+      <ol style="margin:8px 0 0 18px;font-size:14px;line-height:1.8;">`;
+    for (const section of report.sections) {
+      html += `<li><a href="#${section.heading.replace(/[^a-zA-Z0-9]/g,'-')}" style="color:var(--accent);text-decoration:none;">${escapeHtml(section.heading)}</a></li>`;
+    }
+    html += `</ol></div>`;
+  }
+
   // Sections
   if (report.sections) {
     for (const section of report.sections) {
-      html += `<div class="report-section">`;
+      html += `<div class="report-section" id="${section.heading.replace(/[^a-zA-Z0-9]/g,'-')}">`;
       html += `<h2>${escapeHtml(section.heading || "")}</h2>`;
       html += `<p>${formatContent(section.content || "")}</p>`;
 
