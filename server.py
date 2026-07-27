@@ -444,6 +444,9 @@ from search import deep_read, extract_pdf_text
 @app.route("/api/upload/pdf", methods=["POST"])
 def upload_pdf():
     """Upload a PDF file and extract its text for research."""
+    auth_error = require_api_token()
+    if auth_error:
+        return auth_error
     if "file" not in request.files:
         return jsonify({"error": "no file uploaded"}), 400
     file = request.files["file"]
@@ -461,6 +464,9 @@ def upload_pdf():
 @app.route("/api/email/search", methods=["POST"])
 def search_email():
     """Search local .eml files or Gmail inbox for research-relevant emails."""
+    auth_error = require_api_token()
+    if auth_error:
+        return auth_error
     data = request.get_json(silent=True) or {}
     query = data.get("query", "").strip()
     path = data.get("path", os.path.expanduser("~/Documents/emails"))
@@ -520,6 +526,9 @@ def apply_template_endpoint():
 @app.route("/api/deep-read", methods=["POST"])
 def deep_read_endpoint():
     """Fetch and extract content from a URL."""
+    auth_error = require_api_token()
+    if auth_error:
+        return auth_error
     data = request.get_json(silent=True) or {}
     url = data.get("url", "").strip()
     if not url:

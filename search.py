@@ -145,11 +145,12 @@ def extract_pdf_text(filepath: str, max_chars: int = 20000) -> dict:
             text += page.get_text()
             if len(text) > max_chars:
                 break
+        total_pages = len(doc)
         doc.close()
         return {
             "filepath": filepath,
             "content": text[:max_chars],
-            "pages": len(doc),
+            "pages": total_pages,
             "length": len(text),
             "source_type": "pdf",
         }

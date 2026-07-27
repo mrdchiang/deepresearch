@@ -4,7 +4,7 @@ Orchestrator — iterative research loop, session management, concurrency.
 
 import json, time, threading, uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from config import CONFIG, SESSION_LOCK, ACTIVE_RESEARCH_COUNT, ACTIVE_RESEARCH_CONDITION
+from config import CONFIG, SESSION_LOCK, ACTIVE_RESEARCH_COUNT, ACTIVE_RESEARCH_CONDITION, ExternalServiceError, public_error
 from agents import planner_agent, searcher_agent, analyst_agent, synthesizer_agent
 
 # ============================================================
@@ -150,9 +150,11 @@ def run_research(session: ResearchSession):
                         }
                     iter_findings.append(finding)
                     session.metadata["search_queries"].append(sq.get("search_query", sq["question"]))
+                    facts_count = len(finding.get("findings", []))
+                    session.metadata["total_findings"] += facts_count
                     session.emit("finding_complete", {
                         "sub_question": sq["question"],
-                        "facts_found": len(finding.get("findings", [])),
+                        "facts_found": facts_count,
                         "quality": finding.get("quality_assessment", ""),
                     })
 
