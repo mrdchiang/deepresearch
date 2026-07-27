@@ -1,7 +1,9 @@
 """
-Web search engine — DuckDuckGo via ddgs library.
+Web search engine — DuckDuckGo via ddgs library. Also local file search.
 """
 
+import os, re
+from pathlib import Path
 from config import CONFIG
 from ddgs import DDGS
 
@@ -25,6 +27,7 @@ def web_search(query: str, max_results: int = None) -> list[dict]:
                     "title": r.get("title", ""),
                     "url": r.get("href", ""),
                     "snippet": r.get("body", ""),
+                    "source_type": "web",
                 })
     except Exception as e:
         print(f"[SEARCH] DuckDuckGo error: {e} — trying with reduced results")
@@ -35,8 +38,54 @@ def web_search(query: str, max_results: int = None) -> list[dict]:
                         "title": r.get("title", ""),
                         "url": r.get("href", ""),
                         "snippet": r.get("body", ""),
+                        "source_type": "web",
                     })
         except Exception as e2:
             print(f"[SEARCH] Fallback also failed: {e2}")
 
     return results
+
+
+def file_search(query: str, search_paths: list[str] = None, max_results: int = 10) -> list[dict]:
+    """Search local files for relevant content. Returns structured results like web_search."""
+    if search_paths is None:
+        search_paths = [os.path.expanduser("~/Documents"), os.path.expanduser("~/Desktop")]
+        vault_path = CONFIG.get("vault", {}).get("path", "")
+        if vault_path:
+            search_paths.append(os.path.expanduser(vault_path))
+
+    results = []
+    keywords = query.lower().split()
+
+    for search_path in search_paths:
+        sp = Path(search_path).expanduser()
+        if not sp.exists():
+            continue
+
+        for filepath in sp.rglob("*"):
+            if filepath.suffix.lower() not in (".md", ".txt", ".py", ".js", ".html", ".json", ".csv", ".yaml", ".yml", ".pdf"):
+                continue
+            if filepath.stat().st_size > 10_000_000:  # Skip files > 10MB
+                continue
+            if any(part.startswith(".") for part in filepath.parts):  # Skip hidden dirs
+                continue
+            try:
+                content = filepath.read_text(encoding="utf-8", errors="ignore")[:5000]
+                score = sum(1 for kw in keywords if kw in content.lower())
+                if score > 0:
+                    results.append({
+                        "title": str(filepath.relative_to(sp)),
+                        "url": f"file://{filepath}",
+                        "snippet": content[:500],
+                        "source_type": "local",
+                        "relevance_score": score,
+                        "size_bytes": filepath.stat().st_size,
+                    })
+            except Exception:
+                continue
+
+        if len(results) >= max_results:
+            break
+
+    results.sort(key=lambda r: -r.get("relevance_score", 0))
+    return results[:max_results]

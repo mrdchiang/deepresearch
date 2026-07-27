@@ -3,6 +3,7 @@ Orchestrator — iterative research loop, session management, concurrency.
 """
 
 import json, time, threading, uuid
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from config import CONFIG, SESSION_LOCK, ACTIVE_RESEARCH_COUNT, ACTIVE_RESEARCH_CONDITION
 from agents import planner_agent, searcher_agent, analyst_agent, synthesizer_agent
 
@@ -132,28 +133,28 @@ def run_research(session: ResearchSession):
                 "message": f"Research iteration {iteration + 1}/{session.depth} — searching {len(sub_questions)} angles...",
             })
 
-            # Search each sub-question
+            # Search sub-questions in parallel
             iter_findings = []
-            for i, sq in enumerate(sub_questions):
-                session.emit("agent_status", {
-                    "agent": "Searcher",
-                    "status": "searching",
-                    "current": i + 1,
-                    "total": len(sub_questions),
-                    "query": sq.get("search_query", sq["question"]),
-                })
-
-                finding = searcher_agent(sq)
-                iter_findings.append(finding)
-                session.metadata["search_queries"].append(sq.get("search_query", sq["question"]))
-
-                facts_count = len(finding.get("findings", []))
-                session.metadata["total_findings"] += facts_count
-                session.emit("finding_complete", {
-                    "sub_question": sq["question"],
-                    "facts_found": facts_count,
-                    "quality": finding.get("quality_assessment", ""),
-                })
+            with ThreadPoolExecutor(max_workers=min(len(sub_questions), 5)) as executor:
+                future_to_sq = {executor.submit(searcher_agent, sq): sq for sq in sub_questions}
+                for future in as_completed(future_to_sq):
+                    sq = future_to_sq[future]
+                    try:
+                        finding = future.result()
+                    except Exception as e:
+                        finding = {
+                            "sub_question": sq["question"],
+                            "findings": [],
+                            "quality_assessment": f"Search failed: {e}",
+                            "missing_information": ["Search error"],
+                        }
+                    iter_findings.append(finding)
+                    session.metadata["search_queries"].append(sq.get("search_query", sq["question"]))
+                    session.emit("finding_complete", {
+                        "sub_question": sq["question"],
+                        "facts_found": len(finding.get("findings", [])),
+                        "quality": finding.get("quality_assessment", ""),
+                    })
 
             all_findings.extend(iter_findings)
             session.findings = all_findings

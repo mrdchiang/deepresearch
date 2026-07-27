@@ -435,6 +435,29 @@ def report_to_markdown(report: dict) -> str:
     return "\n".join(md)
 
 
+# ── Templates endpoint ──
+
+from templates import list_templates, apply_template
+
+
+@app.route("/api/templates", methods=["GET"])
+def get_templates():
+    """List all research templates."""
+    return jsonify({"templates": list_templates()})
+
+
+@app.route("/api/templates/apply", methods=["POST"])
+def apply_template_endpoint():
+    """Apply a template to a subject and return the expanded prompt."""
+    data = request.get_json(silent=True) or {}
+    template_id = data.get("template_id", "custom")
+    subject = data.get("subject", "").strip()
+    if not subject:
+        return jsonify({"error": "subject is required"}), 400
+    prompt = apply_template(template_id, subject)
+    return jsonify({"prompt": prompt, "template_id": template_id})
+
+
 # ============================================================
 # MAIN
 # ============================================================

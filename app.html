@@ -459,6 +459,28 @@ body {
   border-radius: var(--radius);
 }
 .chart-wrap canvas { max-height: 300px; }
+
+/* Confidence badges */
+.badge-confidence {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-left: 4px;
+}
+.badge-high { background: rgba(63,185,80,0.15); color: #3fb950; }
+.badge-medium { background: rgba(210,153,34,0.15); color: #d29922; }
+.badge-low { background: rgba(248,81,73,0.15); color: #f85149; }
+
+/* Freshness badges */
+.badge-fresh { background: rgba(63,185,80,0.1); color: #3fb950; }
+.badge-recent { background: rgba(88,166,255,0.1); color: #58a6ff; }
+.badge-stale { background: rgba(139,148,158,0.1); color: #8b949e; }
+
+/* Source type badges */
+.badge-web { border-left: 2px solid #58a6ff; }
+.badge-local { border-left: 2px solid #bc8cff; }
 </style>
 </head>
 <body>
@@ -849,6 +871,36 @@ function renderReport(report) {
           html += `<h3>${escapeHtml(sub.heading || "")}</h3>`;
           html += `<p>${formatContent(sub.content || "")}</p>`;
         }
+      }
+
+      // Chart
+      if (section.chart && section.chart.type && section.chart.labels) {
+        const chartId = `chart-${Math.random().toString(36).slice(2, 8)}`;
+        html += `<div class="chart-wrap"><canvas id="${chartId}"></canvas></div>`;
+        // Queue chart rendering for after DOM insertion
+        setTimeout(() => {
+          const ctx = document.getElementById(chartId);
+          if (ctx && window.Chart) {
+            new Chart(ctx, {
+              type: section.chart.type,
+              data: {
+                labels: section.chart.labels,
+                datasets: section.chart.datasets || [],
+              },
+              options: {
+                responsive: true,
+                plugins: {
+                  title: { display: !!section.chart.title, text: section.chart.title || "" },
+                  legend: { labels: { color: "#8b949e" } },
+                },
+                scales: section.chart.type !== "pie" && section.chart.type !== "doughnut" ? {
+                  x: { ticks: { color: "#8b949e" }, grid: { color: "#21262d" } },
+                  y: { ticks: { color: "#8b949e" }, grid: { color: "#21262d" } },
+                } : undefined,
+              },
+            });
+          }
+        }, 100);
       }
 
       html += `</div>`;

@@ -48,6 +48,7 @@ statistics, quotes, and insights. Be precise and always cite your source URL.
 Rules:
 - Extract 3-6 key findings, each with a source URL
 - Include specific data points, dates, numbers when available
+- **Score source freshness**: estimate how recent each source is (current_year=2026, last_year=2025, older=2024-)
 - Note any contradictions between sources
 - Flag speculation vs. established facts
 - If results are low quality, say so honestly
@@ -61,6 +62,7 @@ Return valid JSON:
       "source_url": "https://...",
       "source_title": "title of source",
       "confidence": "high|medium|low",
+      "freshness": "current_year|last_year|older",
       "type": "data_point|quote|analysis|opinion"
     }
   ],
@@ -172,6 +174,16 @@ Return valid JSON:
       "table": {
         "headers": ["col1", "col2"],
         "rows": [["val1", "val2"]]
+      },
+      "chart": {
+        "type": "bar|line|pie|doughnut|radar",
+        "title": "Chart Title",
+        "labels": ["Label 1", "Label 2"],
+        "datasets": [{
+          "label": "Dataset Name",
+          "data": [10, 20],
+          "backgroundColor": ["#58a6ff", "#3fb950"]
+        }]
       }
     }
   ],
