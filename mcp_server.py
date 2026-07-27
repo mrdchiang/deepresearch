@@ -194,7 +194,17 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         report = result["report"]
         meta = result["metadata"]
 
-        # Format a useful summary for the chat context
+        # Build summary sections
+        takeaways = "\n".join(f"- {t}" for t in report.get("key_takeaways", []))
+        sections_text = "\n".join(
+            f"## {s.get('heading', 'Section')}\n{s.get('content', '')[:500]}..."
+            for s in report.get("sections", [])
+        )
+        sources_text = "\n".join(
+            f"- [{s.get('title', 'Source')}]({s.get('url', '#')})"
+            for s in report.get("sources", [])[:10]
+        )
+
         summary = f"""## Research Complete: {report.get('title', question)}
 
 **Executive Summary:** {report.get('executive_summary', '')}
@@ -204,15 +214,15 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
 ---
 
 ### Key Takeaways
-{chr(10).join(f'- {t}' for t in report.get('key_takeaways', []))}
+{takeaways}
 
 ---
 
 ### Full Report Sections
-{chr(10).join(f'## {s.get('heading', 'Section')}\n{s.get('content', '')[:500]}...' for s in report.get('sections', []))}
+{sections_text}
 
 ### Sources ({len(report.get('sources', []))})
-{chr(10).join(f'- [{s.get('title', 'Source')}]({s.get('url', '#')})' for s in report.get('sources', [])[:10])}
+{sources_text}
 
 ---
 *Full report available as Markdown below. Use save_to_second_brain to persist to Obsidian.*
