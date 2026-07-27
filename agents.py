@@ -5,7 +5,7 @@ Multi-agent system — 4 specialized agents for the research pipeline.
 import json
 from config import CONFIG
 from llm_client import llm_call, parse_llm_json
-from search import web_search
+from search import web_search, file_search
 
 PLANNER_PROMPT = """You are a senior research planner. Your job is to decompose a complex research 
 question into specific, answerable sub-questions that cover all important angles.
@@ -75,6 +75,13 @@ def searcher_agent(sub_question: dict) -> dict:
     """Search web for a sub-question and extract findings."""
     query = sub_question.get("search_query", sub_question["question"])
     search_results = web_search(query, max_results=CONFIG["search"]["max_results"])
+
+    # Also search local files
+    try:
+        local_results = file_search(query, max_results=5)
+        search_results.extend(local_results)
+    except Exception:
+        pass  # local search is best-effort
 
     if not search_results:
         return {

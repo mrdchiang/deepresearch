@@ -134,9 +134,16 @@ def start_research():
         ACTIVE_RESEARCH_COUNT += 1
 
     # Start research in background thread with timeout enforcement
+    timeout = CONFIG["security"]["request_timeout_seconds"]
+
     def _run_with_cleanup():
         try:
             run_research(session)
+        except Exception as e:
+            with session._lock:
+                session.error = str(e)
+                session.status = "error"
+            session.emit("error", {"message": public_error(e)})
         finally:
             with ACTIVE_RESEARCH_CONDITION:
                 global ACTIVE_RESEARCH_COUNT
@@ -145,6 +152,17 @@ def start_research():
 
     thread = threading.Thread(target=_run_with_cleanup, daemon=True)
     thread.start()
+
+    # Optional timeout monitor — doesn't block the response
+    if timeout > 0:
+        def _timeout_monitor():
+            thread.join(timeout=timeout)
+            if thread.is_alive() and session.status not in ("complete", "error"):
+                with session._lock:
+                    session.status = "timeout"
+                    session.error = "Research timed out"
+                session.emit("error", {"message": "Research timed out"})
+        threading.Thread(target=_timeout_monitor, daemon=True).start()
 
     return jsonify({
         "session_id": session_id,
@@ -555,30 +573,38 @@ def followup_research(session_id: str):
     if len(followup) < 5:
         return jsonify({"error": "follow-up question too short"}), 400
 
-    # Re-run analyst + synthesizer with follow-up context
-    from agents import analyst_agent, synthesizer_agent
+    # Run planner + searcher for the follow-up question
+    from agents import planner_agent, searcher_agent, analyst_agent, synthesizer_agent
 
     session.emit("phase", {"phase": "followup", "message": f"Follow-up: {followup}"})
 
-    # Add follow-up as a gap-fill analysis
-    existing_findings = [{
-        "sub_question": session.question,
-        "findings": [{"fact": s.get("heading", ""), "source_url": u.get("url", ""),
-                       "source_title": u.get("title", ""), "confidence": "high", "freshness": "current_year", "type": "analysis"}
-                      for s in session.report.get("sections", [])
-                      for u in session.report.get("sources", [])[:1]],
-    }]
+    # Plan and search for the follow-up
+    plan = planner_agent(followup)
+    sub_questions = plan.get("sub_questions", [])[:3]  # limit to 3 for follow-ups
 
-    analysis = analyst_agent(followup, existing_findings)
+    findings = []
+    for sq in sub_questions:
+        finding = searcher_agent(sq)
+        findings.append(finding)
+        session.emit("finding_complete", {
+            "sub_question": sq["question"],
+            "facts_found": len(finding.get("findings", [])),
+            "quality": finding.get("quality_assessment", ""),
+        })
+
+    # Also include relevant findings from the original research
+    original_context = session.findings if session.findings else []
+
+    # Analyze and synthesize
+    analysis = analyst_agent(followup, findings + original_context)
     session.emit("analysis_complete", {
         "coverage_score": analysis.get("coverage_score", 0),
         "needs_more": analysis.get("needs_more_research", False),
         "assessment": analysis.get("overall_assessment", ""),
     })
 
-    # Synthesize follow-up
     combined_meta = {**session.metadata, "followup_question": followup}
-    followup_report = synthesizer_agent(followup, existing_findings, combined_meta)
+    followup_report = synthesizer_agent(followup, findings + original_context, combined_meta)
     followup_report["title"] = f"Follow-up: {followup}"
     session.emit("report_complete", followup_report)
 

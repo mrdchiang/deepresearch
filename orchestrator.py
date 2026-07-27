@@ -80,6 +80,11 @@ def cleanup_sessions():
         ]
         for sid in expired + hung:
             SESSIONS.pop(sid, None)
+        # Decrement ACTIVE_RESEARCH_COUNT for hung sessions (they won't self-cleanup)
+        if hung:
+            global ACTIVE_RESEARCH_COUNT
+            ACTIVE_RESEARCH_COUNT = max(0, ACTIVE_RESEARCH_COUNT - len(hung))
+            ACTIVE_RESEARCH_CONDITION.notify_all()
 
         if max_sessions > 0 and len(SESSIONS) > max_sessions:
             ordered = sorted(SESSIONS.items(), key=lambda item: item[1].updated_at)
