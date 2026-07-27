@@ -52,6 +52,19 @@ Deep research is not new — every major AI platform now has a version. Here's h
 - **Obsidian 2nd brain** — research persists as interlinked wiki notes, searchable by other LLMs
 - **Free web search** — DuckDuckGo, no API key needed
 
+### AI Agent Harnesses That Can Already Do This
+
+Open-source agent frameworks can also perform deep research — here's how they compare:
+
+| Agent Harness | Multi-Agent | Research Skill | Cross-Provider | Citations | MCP | 2nd Brain |
+|---|---|---|---|---|---|---|
+| **Hermes Agent** (Nous) | ✓ delegate_task | ✗ (but composable) | ✓ | ✗ (manual) | ✗ | ✓ via Obsidian skill |
+| **OpenCode** | ✓ Supervisor-Researcher | ✓ [opencode-deep-research](https://skillsmp.com/opencode-deep-research) | ✓ | ✓ | ✓ | ✗ |
+| **Claude Code** (Anthropic) | ✓ subagents | ✗ (general-purpose) | ✗ Claude only | ✗ (manual) | ✗ | ✗ |
+| **DeepResearch (this)** | ✓ 4-agent pipeline | ✓ Purpose-built | ✓ any LLM | ✓ automatic | ✓ MCP server | ✓ Obsidian wiki |
+
+**Why build another one?** Hermes and OpenCode can compose research from general-purpose tools. DeepResearch is purpose-built for one thing — structured, iterative, cited research reports. Like the difference between `curl` (general HTTP) and a dedicated REST client.
+
 ## How It Works
 
 ### The 4-Agent Pipeline
