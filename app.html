@@ -494,6 +494,7 @@ body {
         </select>
       </label>
       <label>Server: <input class="server-url" id="serverUrl" value="http://localhost:5000"></label>
+      <label>API token: <input class="server-url" id="apiToken" type="password" placeholder="optional"></label>
       <span id="healthDot" style="width:8px;height:8px;border-radius:50%;background:var(--text2);display:inline-block;"></span>
       <span id="healthText" style="font-size:11px;color:var(--text2);">checking...</span>
     </div>
@@ -551,6 +552,17 @@ function getServer() {
   return $("#serverUrl").value.replace(/\/+$/, "");
 }
 
+function getToken() {
+  return $("#apiToken")?.value.trim() || "";
+}
+
+function authHeaders(extra = {}) {
+  const headers = {...extra};
+  const token = getToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+  return headers;
+}
+
 // ============================================================
 // Research flow
 // ============================================================
@@ -600,7 +612,7 @@ async function startResearch() {
     const depth = parseInt($("#depthSelect").value);
     const resp = await fetch(`${getServer()}/api/research`, {
       method: "POST",
-      headers: {"Content-Type": "application/json"},
+      headers: authHeaders({"Content-Type": "application/json"}),
       body: JSON.stringify({question, depth}),
     });
     const data = await resp.json();
@@ -620,6 +632,11 @@ async function startResearch() {
 
 function connectSSE(sessionId) {
   if (eventSource) eventSource.close();
+
+  if (getToken()) {
+    pollSession();
+    return;
+  }
 
   eventSource = new EventSource(`${getServer()}/api/research/${sessionId}/stream`);
 
@@ -686,7 +703,7 @@ function connectSSE(sessionId) {
     const item = document.createElement("div");
     item.className = "finding-item";
     item.innerHTML = `<span class="finding-subq">${escapeHtml(data.sub_question)}</span>
-      <span class="finding-count">— ${data.facts_found} facts · ${data.quality || ""}</span>`;
+      <span class="finding-count">— ${escapeHtml(String(data.facts_found || 0))} facts · ${escapeHtml(data.quality || "")}</span>`;
     feed.prepend(item);
   });
 
@@ -725,6 +742,7 @@ function connectSSE(sessionId) {
     // SSE connection lost — but research may still be running
     // Poll the session endpoint
     if (currentSessionId) {
+      eventSource.close();
       setTimeout(pollSession, 2000);
     }
   };
@@ -732,7 +750,9 @@ function connectSSE(sessionId) {
 
 async function pollSession() {
   try {
-    const resp = await fetch(`${getServer()}/api/research/${currentSessionId}`);
+    const resp = await fetch(`${getServer()}/api/research/${currentSessionId}`, {
+      headers: authHeaders(),
+    });
     const data = await resp.json();
     if (data.report) {
       renderReport(data.report);
@@ -801,7 +821,7 @@ function renderReport(report) {
       <strong style="color:var(--accent);font-size:14px;">📑 Table of Contents</strong>
       <ol style="margin:8px 0 0 18px;font-size:14px;line-height:1.8;">`;
     for (const section of report.sections) {
-      html += `<li><a href="#${section.heading.replace(/[^a-zA-Z0-9]/g,'-')}" style="color:var(--accent);text-decoration:none;">${escapeHtml(section.heading)}</a></li>`;
+      html += `<li><a href="#${sectionId(section.heading)}" style="color:var(--accent);text-decoration:none;">${escapeHtml(section.heading)}</a></li>`;
     }
     html += `</ol></div>`;
   }
@@ -809,7 +829,7 @@ function renderReport(report) {
   // Sections
   if (report.sections) {
     for (const section of report.sections) {
-      html += `<div class="report-section" id="${section.heading.replace(/[^a-zA-Z0-9]/g,'-')}">`;
+      html += `<div class="report-section" id="${sectionId(section.heading)}">`;
       html += `<h2>${escapeHtml(section.heading || "")}</h2>`;
       html += `<p>${formatContent(section.content || "")}</p>`;
 
@@ -855,7 +875,8 @@ function renderReport(report) {
   if (report.sources?.length) {
     html += `<h2>Sources</h2><ol class="source-list">`;
     for (const s of report.sources) {
-      html += `<li><a href="${escapeHtml(s.url || "#")}" target="_blank" rel="noopener">${escapeHtml(s.title || s.url || "Source")}</a></li>`;
+      const url = safeUrl(s.url || "#");
+      html += `<li><a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(s.title || s.url || "Source")}</a></li>`;
     }
     html += `</ol>`;
   }
@@ -893,7 +914,9 @@ async function copyReport() {
 async function downloadMD() {
   if (!currentSessionId) return;
   try {
-    const resp = await fetch(`${getServer()}/api/research/${currentSessionId}/report.md`);
+    const resp = await fetch(`${getServer()}/api/research/${currentSessionId}/report.md`, {
+      headers: authHeaders(),
+    });
     const md = await resp.text();
     const blob = new Blob([md], {type: "text/markdown"});
     const url = URL.createObjectURL(blob);
@@ -917,6 +940,7 @@ async function saveToVault() {
   try {
     const resp = await fetch(`${getServer()}/api/research/${currentSessionId}/save-to-vault`, {
       method: "POST",
+      headers: authHeaders(),
     });
     const data = await resp.json();
 
@@ -925,7 +949,7 @@ async function saveToVault() {
       return;
     }
 
-    const filesList = data.files_created.map(f => `  • ${f}`).join("<br>");
+    const filesList = (data.files_created || []).map(f => `  • ${escapeHtml(f)}`).join("<br>");
     resultEl.innerHTML = `
       <div style="background:rgba(63,185,80,0.1);border:1px solid var(--accent2);border-radius:var(--radius);padding:14px;margin-top:8px;">
         <strong style="color:var(--accent2);">✓ Saved to 2nd Brain!</strong><br>
@@ -943,6 +967,19 @@ function escapeHtml(text) {
   const div = document.createElement("div");
   div.textContent = text;
   return div.innerHTML;
+}
+
+function sectionId(text) {
+  return String(text || "section").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80) || "section";
+}
+
+function safeUrl(url) {
+  try {
+    const parsed = new URL(url, window.location.href);
+    return ["http:", "https:"].includes(parsed.protocol) ? parsed.href : "#";
+  } catch {
+    return "#";
+  }
 }
 
 // Enter key to submit

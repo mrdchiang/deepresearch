@@ -8,6 +8,7 @@ Plug-and-play: pip install -r requirements.txt && python server.py
 """
 
 import json, os, re, time, threading, uuid
+from collections import deque
 from datetime import datetime
 from pathlib import Path
 
@@ -39,15 +40,74 @@ CONFIG = {
         "max_sub_questions": 5,
     },
     "server": {
-        "host": "0.0.0.0",
-        "port": 5000,
+        "host": os.getenv("DEEPRESEARCH_HOST", "127.0.0.1"),
+        "port": int(os.getenv("DEEPRESEARCH_PORT", "5000")),
         "debug": False,
+        "cors_origins": [
+            origin.strip()
+            for origin in os.getenv(
+                "DEEPRESEARCH_CORS_ORIGINS",
+                "http://localhost:5000,http://127.0.0.1:5000,https://mrdchiang.github.io",
+            ).split(",")
+            if origin.strip()
+        ],
     },
     "vault": {
         "path": os.getenv("OBSIDIAN_VAULT_PATH", os.path.expanduser("~/Documents/Obsidian Vault")),
-        "enabled": True,  # set False to disable vault saving
+        "enabled": os.getenv("DEEPRESEARCH_VAULT_ENABLED", "true").lower() == "true",
+    },
+    "security": {
+        "api_token": os.getenv("DEEPRESEARCH_API_TOKEN", ""),
+        "max_depth": int(os.getenv("DEEPRESEARCH_MAX_DEPTH", "4")),
+        "max_question_chars": int(os.getenv("DEEPRESEARCH_MAX_QUESTION_CHARS", "1000")),
+        "session_ttl_seconds": int(os.getenv("DEEPRESEARCH_SESSION_TTL_SECONDS", "86400")),
+        "max_sessions": int(os.getenv("DEEPRESEARCH_MAX_SESSIONS", "100")),
+        "rate_limit_per_minute": int(os.getenv("DEEPRESEARCH_RATE_LIMIT_PER_MINUTE", "10")),
     },
 }
+
+SESSION_LOCK = threading.RLock()
+RATE_LIMITS: dict[str, deque] = {}
+
+
+class ExternalServiceError(RuntimeError):
+    """Safe error for upstream API/search failures."""
+
+
+def public_error(exc: Exception) -> str:
+    """Return a client-safe error message without API keys or provider payloads."""
+    if isinstance(exc, ExternalServiceError):
+        return str(exc)
+    if isinstance(exc, json.JSONDecodeError):
+        return "The model returned malformed JSON. Please retry."
+    return "Research failed. Check server logs for details."
+
+
+def require_api_token():
+    """Require a bearer token only when DEEPRESEARCH_API_TOKEN is configured."""
+    expected = CONFIG["security"]["api_token"]
+    if not expected:
+        return None
+    auth = request.headers.get("Authorization", "")
+    if auth != f"Bearer {expected}":
+        return jsonify({"error": "unauthorized"}), 401
+    return None
+
+
+def enforce_rate_limit() -> bool:
+    limit = CONFIG["security"]["rate_limit_per_minute"]
+    if limit <= 0:
+        return True
+    now = time.time()
+    client = request.headers.get("X-Forwarded-For", request.remote_addr or "unknown").split(",")[0].strip()
+    with SESSION_LOCK:
+        hits = RATE_LIMITS.setdefault(client, deque())
+        while hits and now - hits[0] > 60:
+            hits.popleft()
+        if len(hits) >= limit:
+            return False
+        hits.append(now)
+    return True
 
 # ============================================================
 # LLM CLIENT
@@ -83,15 +143,50 @@ def llm_call(system_prompt: str, user_prompt: str, temperature: float = None, js
     if json_mode:
         payload["response_format"] = {"type": "json_object"}
 
-    resp = http_requests.post(
-        f"{cfg['base_url']}/chat/completions",
-        headers=headers,
-        json=payload,
-        timeout=120,
-    )
-    resp.raise_for_status()
-    data = resp.json()
-    return data["choices"][0]["message"]["content"]
+    last_error = None
+    for attempt in range(3):
+        try:
+            resp = http_requests.post(
+                f"{cfg['base_url']}/chat/completions",
+                headers=headers,
+                json=payload,
+                timeout=120,
+            )
+            if resp.status_code == 429:
+                retry_after = int(resp.headers.get("Retry-After", "0") or "0")
+                time.sleep(retry_after or (2 ** attempt))
+                continue
+            resp.raise_for_status()
+            data = resp.json()
+            return data["choices"][0]["message"]["content"]
+        except http_requests.exceptions.Timeout as e:
+            last_error = e
+            if attempt < 2:
+                time.sleep(2 ** attempt)
+                continue
+        except http_requests.exceptions.RequestException as e:
+            status = getattr(getattr(e, "response", None), "status_code", None)
+            if status and 500 <= status < 600 and attempt < 2:
+                last_error = e
+                time.sleep(2 ** attempt)
+                continue
+            raise ExternalServiceError(f"LLM request failed with status {status or 'unknown'}") from e
+        except (KeyError, IndexError, TypeError, ValueError) as e:
+            raise ExternalServiceError("LLM response was not in the expected format") from e
+
+    raise ExternalServiceError("LLM request timed out or was rate limited") from last_error
+
+
+def parse_llm_json(response: str, context: str) -> dict:
+    """Parse JSON-mode output and return a useful internal error on failure."""
+    try:
+        data = json.loads(response)
+    except json.JSONDecodeError as e:
+        print(f"[LLM JSON ERROR] {context}: {e}")
+        raise
+    if not isinstance(data, dict):
+        raise ExternalServiceError(f"{context} returned a non-object JSON response")
+    return data
 
 
 # ============================================================
@@ -169,7 +264,7 @@ def planner_agent(question: str) -> dict:
     """Plan: decompose the research question into sub-questions."""
     user = f"Research question: {question}\n\nBreak this down into sub-questions."
     response = llm_call(PLANNER_PROMPT, user, temperature=0.2, json_mode=True)
-    return json.loads(response)
+    return parse_llm_json(response, "planner")
 
 
 # ── Agent 2: SEARCHER ──────────────────────────────────────
@@ -230,7 +325,7 @@ Web search results:
 Extract key findings from these results."""
 
     response = llm_call(SEARCHER_PROMPT, user, temperature=0.2, json_mode=True)
-    return json.loads(response)
+    return parse_llm_json(response, "searcher")
 
 
 # ── Agent 3: ANALYST ───────────────────────────────────────
@@ -276,7 +371,7 @@ All findings collected so far:
 Review these findings and identify gaps."""
 
     response = llm_call(ANALYST_PROMPT, user, temperature=0.3, json_mode=True)
-    return json.loads(response)
+    return parse_llm_json(response, "analyst")
 
 
 # ── Agent 4: SYNTHESIZER ───────────────────────────────────
@@ -338,7 +433,7 @@ Research metadata:
 Synthesize everything into a comprehensive final report."""
 
     response = llm_call(SYNTHESIZER_PROMPT, user, temperature=0.4, json_mode=True)
-    return json.loads(response)
+    return parse_llm_json(response, "synthesizer")
 
 
 # ============================================================
@@ -352,6 +447,8 @@ class ResearchSession:
         self.id = session_id
         self.question = question
         self.depth = depth or CONFIG["research"]["max_iterations"]
+        self.created_at = time.time()
+        self.updated_at = self.created_at
         self.status = "planning"
         self.progress = []
         self.findings = []
@@ -364,23 +461,65 @@ class ResearchSession:
             "search_queries": [],
         }
         self._listeners = []  # SSE listeners
+        self._lock = threading.RLock()
 
     def emit(self, event_type: str, data: dict):
         """Send progress update to all SSE listeners."""
-        self.progress.append({"type": event_type, "data": data, "time": time.time()})
-        for queue in self._listeners:
+        with self._lock:
+            self.updated_at = time.time()
+            self.progress.append({"type": event_type, "data": data, "time": self.updated_at})
+            listeners = list(self._listeners)
+        for queue in listeners:
             queue.append({"event": event_type, "data": json.dumps(data)})
 
     def add_listener(self, queue: list):
-        self._listeners.append(queue)
+        with self._lock:
+            self._listeners.append(queue)
 
     def remove_listener(self, queue: list):
-        if queue in self._listeners:
-            self._listeners.remove(queue)
+        with self._lock:
+            if queue in self._listeners:
+                self._listeners.remove(queue)
 
 
 # In-memory session store
 SESSIONS: dict[str, ResearchSession] = {}
+
+
+def cleanup_sessions():
+    """Drop old completed/error sessions and cap total in-memory sessions."""
+    now = time.time()
+    ttl = CONFIG["security"]["session_ttl_seconds"]
+    max_sessions = CONFIG["security"]["max_sessions"]
+    with SESSION_LOCK:
+        expired = [
+            sid for sid, session in SESSIONS.items()
+            if ttl > 0
+            and session.status in ("complete", "error")
+            and now - session.updated_at > ttl
+        ]
+        for sid in expired:
+            SESSIONS.pop(sid, None)
+
+        if max_sessions > 0 and len(SESSIONS) > max_sessions:
+            ordered = sorted(SESSIONS.items(), key=lambda item: item[1].updated_at)
+            for sid, session in ordered[:len(SESSIONS) - max_sessions]:
+                if session.status in ("complete", "error"):
+                    SESSIONS.pop(sid, None)
+
+
+def parse_depth(value) -> int:
+    max_depth = CONFIG["security"]["max_depth"]
+    default_depth = min(CONFIG["research"]["max_iterations"], max_depth)
+    if value is None:
+        return default_depth
+    try:
+        depth = int(value)
+    except (TypeError, ValueError) as e:
+        raise ValueError("depth must be an integer") from e
+    if depth < 1 or depth > max_depth:
+        raise ValueError(f"depth must be between 1 and {max_depth}")
+    return depth
 
 
 def run_research(session: ResearchSession):
@@ -497,9 +636,9 @@ def run_research(session: ResearchSession):
 
     except Exception as e:
         session.status = "error"
-        session.error = str(e)
-        session.emit("error", {"message": str(e)})
-        print(f"[RESEARCH ERROR] {e}")
+        session.error = public_error(e)
+        session.emit("error", {"message": session.error})
+        print(f"[RESEARCH ERROR] {type(e).__name__}: {e}")
 
 
 # ============================================================
@@ -564,7 +703,7 @@ Use [[wikilinks]] between related notes (minimum 2 per note).
 Tags should be reusable, lowercase-hyphenated categories."""
 
     response = llm_call(WIKI_FRONTMATTER_AGENT_PROMPT, user, temperature=0.3, json_mode=True)
-    return json.loads(response)
+    return parse_llm_json(response, "wiki")
 
 
 def ensure_vault_structure(vault_path: str):
@@ -576,15 +715,31 @@ def ensure_vault_structure(vault_path: str):
 
 def get_or_create_file(vault_path: str, filename: str, default_content: str = "") -> str:
     """Get existing file content or return default."""
-    filepath = Path(vault_path, filename)
+    filepath = safe_vault_path(vault_path, filename)
     if filepath.exists():
         return filepath.read_text(encoding="utf-8")
     return default_content
 
 
+def safe_vault_path(vault_path: str, filename: str) -> Path:
+    """Resolve a note path and ensure it stays inside the configured vault."""
+    if not filename or "\x00" in filename:
+        raise ValueError("invalid wiki filename")
+    normalized = filename.replace("\\", "/").lstrip("/")
+    if re.match(r"^[A-Za-z]:", normalized) or normalized.startswith("../"):
+        raise ValueError("wiki filename must be relative to the vault")
+    vault_root = Path(vault_path).expanduser().resolve()
+    filepath = (vault_root / normalized).resolve()
+    if vault_root != filepath and vault_root not in filepath.parents:
+        raise ValueError("wiki filename escapes the vault")
+    if filepath.suffix.lower() != ".md":
+        raise ValueError("wiki filename must end in .md")
+    return filepath
+
+
 def save_wiki_note(vault_path: str, filename: str, content: str):
     """Save a wiki note, creating parent directories if needed."""
-    filepath = Path(vault_path, filename)
+    filepath = safe_vault_path(vault_path, filename)
     filepath.parent.mkdir(parents=True, exist_ok=True)
     filepath.write_text(content, encoding="utf-8")
 
@@ -647,7 +802,7 @@ def append_log(vault_path: str, action: str, details: str):
 # ============================================================
 
 app = Flask(__name__, static_folder=".", static_url_path="")
-CORS(app)
+CORS(app, origins=CONFIG["server"]["cors_origins"])
 
 
 @app.route("/")
@@ -665,10 +820,13 @@ def app_page():
 @app.route("/api/health", methods=["GET"])
 def health():
     """Health check endpoint."""
+    cleanup_sessions()
+    with SESSION_LOCK:
+        sessions_active = len([s for s in SESSIONS.values() if s.status not in ("complete", "error")])
     return jsonify({
         "status": "ok",
         "model": CONFIG["llm"]["model"],
-        "sessions_active": len([s for s in SESSIONS.values() if s.status not in ("complete", "error")]),
+        "sessions_active": sessions_active,
         "timestamp": datetime.utcnow().isoformat(),
     })
 
@@ -676,20 +834,36 @@ def health():
 @app.route("/api/research", methods=["POST"])
 def start_research():
     """Start a new research session. Returns session_id for SSE connection."""
-    data = request.get_json()
+    auth_error = require_api_token()
+    if auth_error:
+        return auth_error
+    if not enforce_rate_limit():
+        return jsonify({"error": "rate limit exceeded"}), 429
+
+    cleanup_sessions()
+    data = request.get_json(silent=True) or {}
+    if not isinstance(data, dict):
+        return jsonify({"error": "JSON body must be an object"}), 400
     question = data.get("question", "").strip()
-    depth = data.get("depth", None)
 
     if not question:
         return jsonify({"error": "question is required"}), 400
     if len(question) < 10:
         return jsonify({"error": "question too short (min 10 chars)"}), 400
-    if len(question) > 1000:
-        return jsonify({"error": "question too long (max 1000 chars)"}), 400
+    max_question_chars = CONFIG["security"]["max_question_chars"]
+    if len(question) > max_question_chars:
+        return jsonify({"error": f"question too long (max {max_question_chars} chars)"}), 400
+    try:
+        depth = parse_depth(data.get("depth", None))
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
 
     session_id = uuid.uuid4().hex[:12]
     session = ResearchSession(session_id, question, depth)
-    SESSIONS[session_id] = session
+    with SESSION_LOCK:
+        if CONFIG["security"]["max_sessions"] > 0 and len(SESSIONS) >= CONFIG["security"]["max_sessions"]:
+            return jsonify({"error": "server is at session capacity"}), 429
+        SESSIONS[session_id] = session
 
     # Start research in background thread
     thread = threading.Thread(target=run_research, args=(session,), daemon=True)
@@ -705,7 +879,11 @@ def start_research():
 @app.route("/api/research/<session_id>/stream")
 def stream_research(session_id: str):
     """SSE endpoint for live research progress."""
-    session = SESSIONS.get(session_id)
+    auth_error = require_api_token()
+    if auth_error:
+        return auth_error
+    with SESSION_LOCK:
+        session = SESSIONS.get(session_id)
     if not session:
         return jsonify({"error": "session not found"}), 404
 
@@ -752,43 +930,69 @@ def stream_research(session_id: str):
 @app.route("/api/research/<session_id>", methods=["GET"])
 def get_research(session_id: str):
     """Get the full research result."""
-    session = SESSIONS.get(session_id)
+    auth_error = require_api_token()
+    if auth_error:
+        return auth_error
+    with SESSION_LOCK:
+        session = SESSIONS.get(session_id)
     if not session:
         return jsonify({"error": "session not found"}), 404
+
+    with session._lock:
+        progress = list(session.progress)
+        findings_count = len(session.findings)
+        report = session.report
+        metadata = dict(session.metadata)
+        error = session.error
 
     return jsonify({
         "session_id": session.id,
         "question": session.question,
         "status": session.status,
-        "progress": session.progress,
-        "findings_count": len(session.findings),
-        "report": session.report,
-        "metadata": session.metadata,
-        "error": session.error,
+        "progress": progress,
+        "findings_count": findings_count,
+        "report": report,
+        "metadata": metadata,
+        "error": error,
     })
 
 
 @app.route("/api/research/<session_id>/report.md", methods=["GET"])
 def get_report_markdown(session_id: str):
     """Get the report as Markdown."""
-    session = SESSIONS.get(session_id)
-    if not session or not session.report:
+    auth_error = require_api_token()
+    if auth_error:
+        return auth_error
+    with SESSION_LOCK:
+        session = SESSIONS.get(session_id)
+    if not session:
+        return jsonify({"error": "session not found"}), 404
+    with session._lock:
+        report = session.report
+    if not report:
         return jsonify({"error": "report not ready"}), 404
 
-    md = report_to_markdown(session.report)
+    md = report_to_markdown(report)
     return Response(md, mimetype="text/markdown")
 
 
 @app.route("/api/research/<session_id>/save-to-vault", methods=["POST"])
 def save_to_vault(session_id: str):
     """Save the research report to the 2nd-brain Obsidian vault as wiki notes."""
+    auth_error = require_api_token()
+    if auth_error:
+        return auth_error
     if not CONFIG["vault"]["enabled"]:
         return jsonify({"error": "Vault saving is disabled. Set vault.enabled=True in CONFIG."}), 400
 
-    session = SESSIONS.get(session_id)
+    with SESSION_LOCK:
+        session = SESSIONS.get(session_id)
     if not session:
         return jsonify({"error": "session not found"}), 404
-    if not session.report:
+    with session._lock:
+        report = session.report
+        question = session.question
+    if not report:
         return jsonify({"error": "report not ready yet"}), 400
 
     vault_path = CONFIG["vault"]["path"]
@@ -799,7 +1003,7 @@ def save_to_vault(session_id: str):
         ensure_vault_structure(vault_path)
 
         # Decompose report into wiki notes via LLM
-        wiki_data = report_to_wiki(session.report, session.question, session_id)
+        wiki_data = report_to_wiki(report, question, session_id)
 
         files_created = []
         vault_updates = wiki_data.get("vault_updates", {})
@@ -837,7 +1041,7 @@ def save_to_vault(session_id: str):
             vault_path,
             "research-save",
             f"Research session {session_id} saved to vault.\n"
-            f"Question: {session.question}\n"
+            f"Question: {question}\n"
             f"Files created: {len(files_created)}\n"
             + "\n".join(f"- {f}" for f in files_created),
         )
@@ -850,12 +1054,16 @@ def save_to_vault(session_id: str):
         })
 
     except Exception as e:
-        return jsonify({"error": f"Failed to save to vault: {str(e)}"}), 500
+        print(f"[VAULT ERROR] {type(e).__name__}: {e}")
+        return jsonify({"error": "Failed to save to vault. Check server logs for details."}), 500
 
 
 @app.route("/api/vault/status", methods=["GET"])
 def vault_status():
     """Check vault configuration and existence."""
+    auth_error = require_api_token()
+    if auth_error:
+        return auth_error
     vault_path = os.path.expanduser(CONFIG["vault"]["path"])
     exists = Path(vault_path).exists()
     return jsonify({

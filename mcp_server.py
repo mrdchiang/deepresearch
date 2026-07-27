@@ -8,7 +8,7 @@ Usage:
 One install, works everywhere.
 """
 
-import json, os, sys, asyncio, uuid, threading
+import json, os, re, sys, asyncio, uuid, threading
 from pathlib import Path
 from datetime import datetime
 
@@ -19,7 +19,7 @@ from server import (
     CONFIG, web_search, planner_agent, searcher_agent,
     analyst_agent, synthesizer_agent, report_to_markdown,
     report_to_wiki, ensure_vault_structure, save_wiki_note,
-    update_index, append_log, llm_call,
+    update_index, append_log, llm_call, parse_depth,
 )
 
 # ============================================================
@@ -118,10 +118,13 @@ async def list_tools() -> list[Tool]:
                         "Best for complex questions requiring deep analysis.",
             inputSchema={
                 "type": "object",
+                "additionalProperties": False,
                 "properties": {
                     "question": {
                         "type": "string",
                         "description": "The research question to investigate. Be specific and detailed.",
+                        "minLength": 10,
+                        "maxLength": 1000,
                     },
                     "depth": {
                         "type": "integer",
@@ -140,15 +143,20 @@ async def list_tools() -> list[Tool]:
                         "when full deep research isn't needed.",
             inputSchema={
                 "type": "object",
+                "additionalProperties": False,
                 "properties": {
                     "query": {
                         "type": "string",
                         "description": "Search query",
+                        "minLength": 1,
+                        "maxLength": 300,
                     },
                     "max_results": {
                         "type": "integer",
                         "description": "Number of results (default: 5)",
                         "default": 5,
+                        "minimum": 1,
+                        "maximum": 10,
                     },
                 },
                 "required": ["query"],
@@ -161,14 +169,19 @@ async def list_tools() -> list[Tool]:
                         "frontmatter, [[wikilinks]], and auto-updates index/log.",
             inputSchema={
                 "type": "object",
+                "additionalProperties": False,
                 "properties": {
                     "content": {
                         "type": "string",
                         "description": "Research content or report to save as wiki notes",
+                        "minLength": 1,
+                        "maxLength": 200000,
                     },
                     "topic": {
                         "type": "string",
                         "description": "Main topic/question for the wiki entry",
+                        "minLength": 1,
+                        "maxLength": 200,
                     },
                 },
                 "required": ["content", "topic"],
@@ -180,10 +193,15 @@ async def list_tools() -> list[Tool]:
 @mcp.call_tool()
 async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     if name == "deep_research":
-        question = arguments["question"]
-        depth = arguments.get("depth", 3)
+        question = str(arguments["question"]).strip()
+        if len(question) < 10 or len(question) > 1000:
+            return [TextContent(type="text", text="Research question must be 10-1000 characters.")]
+        try:
+            depth = parse_depth(arguments.get("depth", 3))
+        except ValueError as e:
+            return [TextContent(type="text", text=str(e))]
 
-        result = run_research_sync(question, depth)
+        result = await asyncio.to_thread(run_research_sync, question, depth)
 
         if not result["success"]:
             return [TextContent(
@@ -233,9 +251,9 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         ]
 
     elif name == "web_search":
-        query = arguments["query"]
-        max_results = arguments.get("max_results", 5)
-        results = web_search(query, max_results)
+        query = str(arguments["query"]).strip()
+        max_results = max(1, min(int(arguments.get("max_results", 5)), 10))
+        results = await asyncio.to_thread(web_search, query, max_results)
 
         if not results:
             return [TextContent(type="text", text="No results found.")]
@@ -247,8 +265,8 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         return [TextContent(type="text", text=text)]
 
     elif name == "save_to_second_brain":
-        content = arguments["content"]
-        topic = arguments["topic"]
+        content = str(arguments["content"])
+        topic = str(arguments["topic"]).strip()
 
         vault_path = os.path.expanduser(CONFIG["vault"]["path"])
 
@@ -263,11 +281,11 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
 
             # Create a simple wiki note for ad-hoc saves
             date_str = datetime.now().strftime("%Y-%m-%d")
-            slug = topic.lower().replace(" ", "-")[:60].strip("-")
+            slug = re.sub(r"[^a-z0-9-]+", "-", topic.lower()).strip("-")[:60] or "research-note"
 
             # Create a query note
             note = f"""---
-title: "{topic}"
+title: {json.dumps(topic)}
 created: {date_str}
 type: query
 tags: [research, saved-from-mcp]

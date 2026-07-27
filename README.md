@@ -21,6 +21,10 @@ export OPENAI_API_KEY="sk-..."
 export OPENAI_BASE_URL="https://api.deepseek.com/v1"
 export DEEPRESEARCH_MODEL="deepseek-chat"
 
+# Optional but recommended if exposed beyond localhost
+export DEEPRESEARCH_API_TOKEN="change-me"
+export DEEPRESEARCH_CORS_ORIGINS="https://your-site.example"
+
 # 3. Start
 python server.py
 
@@ -68,6 +72,23 @@ All via environment variables:
 | `DEEPRESEARCH_MODEL` | `gpt-4o` | Model to use |
 
 Or edit `CONFIG` dict at the top of `server.py`.
+
+## Security Notes
+
+By default the server binds to `127.0.0.1` for local use. Do not expose it publicly without setting `DEEPRESEARCH_API_TOKEN`, restricting `DEEPRESEARCH_CORS_ORIGINS`, and running behind a production WSGI server/reverse proxy.
+
+Useful environment variables:
+
+| Variable | Default | Description |
+|---|---|---|
+| `DEEPRESEARCH_API_TOKEN` | empty | Optional bearer token required for research/result/vault endpoints when set |
+| `DEEPRESEARCH_HOST` | `127.0.0.1` | Bind host. Use `0.0.0.0` only behind proper network controls |
+| `DEEPRESEARCH_PORT` | `5000` | Flask port |
+| `DEEPRESEARCH_CORS_ORIGINS` | localhost + GitHub Pages origin | Comma-separated allowed browser origins |
+| `DEEPRESEARCH_RATE_LIMIT_PER_MINUTE` | `10` | Simple per-client start-request limit |
+| `DEEPRESEARCH_MAX_DEPTH` | `4` | Maximum research iterations accepted by the API |
+| `DEEPRESEARCH_SESSION_TTL_SECONDS` | `86400` | Cleanup TTL for completed/error sessions |
+| `DEEPRESEARCH_MAX_SESSIONS` | `100` | In-memory session cap |
 
 ## API
 
